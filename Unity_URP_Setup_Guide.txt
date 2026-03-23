@@ -1,0 +1,167 @@
+================================================================================
+UNITY URP 14+ SETUP GUIDE FOR MERL BRDF 3D TEXTURES
+UNITY URP 14+ SETUP GUIDE FOR MERL BRDF 3D TEXTURES
+================================================================================
+
+This guide explains how to import your generated .exr Atlas and set up a custom
+This guide explains how to import your generated .exr Atlas and set up a custom
+Unlit Shader Graph to render the MERL BRDF data in Unity URP.
+Unlit Shader Graph to render the MERL BRDF data in Unity URP.
+
+--------------------------------------------------------------------------------
+STEP 1: IMPORT THE TEXTURE
+STEP 1: IMPORT THE TEXTURE
+--------------------------------------------------------------------------------
+1. Drag and drop your generated .exr Atlas file into Unity's Project window.
+1. Drag and drop your generated .exr Atlas file into Unity's Project window.
+2. Select the .exr file in the Project window.
+2. Select the .exr file in the Project window.
+3. In the Inspector window:
+3. In the Inspector window:
+   - Change "Texture Shape" to "3D".
+   - Change "Texture Shape" to "3D".
+   - Set "Columns" to 10.
+   - Set "Columns" to 10.
+   - Set "Rows" to 9.
+   - Set "Rows" to 9.
+4. Click the "Apply" button at the bottom of the Inspector.
+4. Click the "Apply" button at the bottom of the Inspector.
+
+--------------------------------------------------------------------------------
+STEP 2: CREATE THE SHADER GRAPH
+STEP 2: CREATE THE SHADER GRAPH
+--------------------------------------------------------------------------------
+1. Ensure the "MERLBRDF.hlsl" file is located somewhere in your Unity project.
+1. Ensure the "MERLBRDF.hlsl" file is located somewhere in your Unity project.
+2. Right-click in the Project window and select:
+2. Right-click in the Project window and select:
+   Create -> Shader Graph -> URP -> Unlit Shader Graph.
+   Create -> Shader Graph -> URP -> Unlit Shader Graph.
+3. Name it "Merl_BRDF_Shader" and double-click to open the Shader Graph editor.
+3. Name it "Merl_BRDF_Shader" and double-click to open the Shader Graph editor.
+
+--------------------------------------------------------------------------------
+STEP 3: ADD AND CONFIGURE THE CUSTOM FUNCTION NODE
+STEP 3: ADD AND CONFIGURE THE CUSTOM FUNCTION NODE
+--------------------------------------------------------------------------------
+1. In the Shader Graph editor, press Space (or right-click) and search for
+1. In the Shader Graph editor, press Space (or right-click) and search for
+   "Custom Function". Add this node to your graph.
+   "Custom Function". Add this node to your graph.
+2. Select the Custom Function node and open the Graph Inspector (Node Settings):
+2. Select the Custom Function node and open the Graph Inspector (Node Settings):
+   - Set "Type" to "File".
+   - Set "Type" to "File".
+   - In the "Source" slot, assign your "MERLBRDF.hlsl" file.
+   - In the "Source" slot, assign your "MERLBRDF.hlsl" file.
+   - Set "Name" exactly to "CalculateMerlTextureCoordinates".
+   - Set "Name" exactly to "CalculateMerlTextureCoordinates".
+3. Under the "Inputs" list, add 3 items:
+3. Under the "Inputs" list, add 3 items:
+   - Name: light_direction, Type: Vector 3
+   - Name: light_direction, Type: Vector 3
+   - Name: view_direction, Type: Vector 3
+   - Name: view_direction, Type: Vector 3
+   - Name: surface_normal, Type: Vector 3
+   - Name: surface_normal, Type: Vector 3
+4. Under the "Outputs" list, add 1 item:
+4. Under the "Outputs" list, add 1 item:
+   - Name: out_texture_coordinates, Type: Vector 3
+   - Name: out_texture_coordinates, Type: Vector 3
+
+--------------------------------------------------------------------------------
+STEP 4: CONNECT THE INPUT VECTORS
+STEP 4: CONNECT THE INPUT VECTORS
+--------------------------------------------------------------------------------
+Create the following nodes and connect them to the Custom Function inputs:
+Create the following nodes and connect them to the Custom Function inputs:
+1. Add a "Main Light Direction" node. Connect it to the "light_direction" input.
+1. Add a "Main Light Direction" node. Connect it to the "light_direction" input.
+2. Add a "View Direction" node. Set its Space to "World". Connect it to the "view_direction" input.
+2. Add a "View Direction" node. Set its Space to "World". Connect it to the "view_direction" input.
+3. Add a "Normal Vector" node. Set its Space to "World". Connect it to the "surface_normal" input.
+3. Add a "Normal Vector" node. Set its Space to "World". Connect it to the "surface_normal" input.
+
+--------------------------------------------------------------------------------
+STEP 5: SAMPLE THE 3D TEXTURE
+STEP 5: SAMPLE THE 3D TEXTURE
+--------------------------------------------------------------------------------
+1. Add a "Sample Texture 3D" node to the graph.
+1. Add a "Sample Texture 3D" node to the graph.
+2. Connect the "out_texture_coordinates" output from your Custom Function into the "UV" input of
+2. Connect the "out_texture_coordinates" output from your Custom Function into the "UV" input of
+   the Sample Texture 3D node.
+   the Sample Texture 3D node.
+3. In the Blackboard (top left), click the "+" button and add a "Texture 3D" property.
+3. In the Blackboard (top left), click the "+" button and add a "Texture 3D" property.
+   Name it "MERL Texture".
+   Name it "MERL Texture".
+4. Drag the "MERL Texture" property from the Blackboard into the graph.
+4. Drag the "MERL Texture" property from the Blackboard into the graph.
+5. Connect it to the "Texture 3D" input of the Sample Texture 3D node.
+5. Connect it to the "Texture 3D" input of the Sample Texture 3D node.
+   (Optional: You can assign your imported .exr texture as the default value in the Blackboard).
+   (Optional: You can assign your imported .exr texture as the default value in the Blackboard).
+
+--------------------------------------------------------------------------------
+STEP 6: APPLY LIGHTING (THE RENDERING EQUATION)
+STEP 6: APPLY LIGHTING (THE RENDERING EQUATION)
+--------------------------------------------------------------------------------
+Because this is an Unlit shader, we must calculate the final light interaction:
+Because this is an Unlit shader, we must calculate the final light interaction:
+1. Add a "Main Light" node to get the directional light's color.
+1. Add a "Main Light" node to get the directional light's color.
+2. Multiply the Texture Data by the Light Color:
+2. Multiply the Texture Data by the Light Color:
+   - Add a "Multiply" node.
+   - Add a "Multiply" node.
+   - Connect "Sample Texture 3D" output to A.
+   - Connect "Sample Texture 3D" output to A.
+   - Connect "Main Light" (Color output) to B.
+   - Connect "Main Light" (Color output) to B.
+3. Calculate N dot L (Lambertian term):
+3. Calculate N dot L (Lambertian term):
+   - Add a "Dot Product" node.
+   - Add a "Dot Product" node.
+   - Connect your "Normal Vector" to A.
+   - Connect your "Normal Vector" to A.
+   - Connect your "Main Light Direction" to B.
+   - Connect your "Main Light Direction" to B.
+4. Add a "Saturate" node and connect the Dot Product output to it.
+4. Add a "Saturate" node and connect the Dot Product output to it.
+   (This ensures light doesn't wrap around to the back of the object).
+   (This ensures light doesn't wrap around to the back of the object).
+5. Multiply everything together:
+5. Multiply everything together:
+   - Add another "Multiply" node.
+   - Add another "Multiply" node.
+   - Connect the output of the first Multiply (Texture * Light Color) to A.
+   - Connect the output of the first Multiply (Texture * Light Color) to A.
+   - Connect the output of the Saturate node (N dot L) to B.
+   - Connect the output of the Saturate node (N dot L) to B.
+
+--------------------------------------------------------------------------------
+STEP 7: FINAL OUTPUT
+STEP 7: FINAL OUTPUT
+--------------------------------------------------------------------------------
+1. Connect the final Multiply node output to the "Base Color" block of the
+1. Connect the final Multiply node output to the "Base Color" block of the
+   Unlit Master Node (Fragment context).
+   Unlit Master Node (Fragment context).
+2. Click "Save Asset" in the top left of the Shader Graph editor.
+2. Click "Save Asset" in the top left of the Shader Graph editor.
+
+--------------------------------------------------------------------------------
+STEP 8: USE THE SHADER
+STEP 8: USE THE SHADER
+--------------------------------------------------------------------------------
+1. In the Project window, right-click your new "Merl_BRDF_Shader" asset.
+1. In the Project window, right-click your new "Merl_BRDF_Shader" asset.
+2. Select Create -> Material. This creates a Material using your custom shader.
+2. Select Create -> Material. This creates a Material using your custom shader.
+3. Select the Material and assign your imported 3D .exr texture to the
+3. Select the Material and assign your imported 3D .exr texture to the
+   "MERL Texture" property in the Inspector.
+   "MERL Texture" property in the Inspector.
+4. Drag and drop the Material onto any 3D object in your scene.
+4. Drag and drop the Material onto any 3D object in your scene.
