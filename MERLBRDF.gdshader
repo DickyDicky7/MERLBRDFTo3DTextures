@@ -1,10 +1,10 @@
     shader_type spatial;
 //  shader_type spatial;
 
-    // Disabling standard PBR lighting so we can completely define our own BRDF
-//  // Disabling standard PBR lighting so we can completely define our own BRDF
-    render_mode ambient_light_disabled;
-//  render_mode ambient_light_disabled;
+    // We allow standard ambient lighting so Godot can process Skybox and Ambient IBL
+//  // We allow standard ambient lighting so Godot can process Skybox and Ambient IBL
+    // render_mode ambient_light_disabled;
+//  // render_mode ambient_light_disabled;
 
     // ---------------------------------------------------------------------------------
 //  // ---------------------------------------------------------------------------------
@@ -24,6 +24,13 @@
     uniform float exposure_multiplier = 1.0;
 //  uniform float exposure_multiplier = 1.0;
 
+    // We expose roughness and metallic for ambient/skybox reflections since MERL BRDF doesn't handle them
+//  // We expose roughness and metallic for ambient/skybox reflections since MERL BRDF doesn't handle them
+    uniform float environment_roughness : hint_range(0.0, 1.0) = 1.0;
+//  uniform float environment_roughness : hint_range(0.0, 1.0) = 1.0;
+    uniform float environment_metallic : hint_range(0.0, 1.0) = 0.0;
+//  uniform float environment_metallic : hint_range(0.0, 1.0) = 0.0;
+
     // ---------------------------------------------------------------------------------
 //  // ---------------------------------------------------------------------------------
     // FRAGMENT
@@ -32,12 +39,16 @@
 //  // ---------------------------------------------------------------------------------
     void fragment() {
 //  void fragment() {
-        // We handle all lighting in the light() function, so we leave ALBEDO empty.
-//      // We handle all lighting in the light() function, so we leave ALBEDO empty.
-        // However, Godot requires something to write to the depth buffer.
-//      // However, Godot requires something to write to the depth buffer.
-        ALBEDO = vec3(0.0);
-//      ALBEDO = vec3(0.0);
+        // We set ALBEDO, METALLIC, and ROUGHNESS so Godot can compute built-in Ambient and Skybox Image-Based Lighting
+//      // We set ALBEDO, METALLIC, and ROUGHNESS so Godot can compute built-in Ambient and Skybox Image-Based Lighting
+        // The light() function still completely overrides the direct lighting calculation with MERL
+//      // The light() function still completely overrides the direct lighting calculation with MERL
+        ALBEDO = base_color_albedo;
+//      ALBEDO = base_color_albedo;
+        METALLIC = environment_metallic;
+//      METALLIC = environment_metallic;
+        ROUGHNESS = environment_roughness;
+//      ROUGHNESS = environment_roughness;
     }
 //  }
 

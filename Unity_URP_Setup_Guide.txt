@@ -37,8 +37,8 @@ STEP 2: CREATE THE SHADER GRAPH
 2. Right-click in the Project window and select:
    Create -> Shader Graph -> URP -> Unlit Shader Graph.
    Create -> Shader Graph -> URP -> Unlit Shader Graph.
-3. Name it "Merl_BRDF_Shader" and double-click to open the Shader Graph editor.
-3. Name it "Merl_BRDF_Shader" and double-click to open the Shader Graph editor.
+3. Name it "MERL_BRDF_Shader" and double-click to open the Shader Graph editor.
+3. Name it "MERL_BRDF_Shader" and double-click to open the Shader Graph editor.
 
 --------------------------------------------------------------------------------
 STEP 3: ADD AND CONFIGURE THE CUSTOM FUNCTION NODE
@@ -54,8 +54,8 @@ STEP 3: ADD AND CONFIGURE THE CUSTOM FUNCTION NODE
    - Set "Type" to "File".
    - In the "Source" slot, assign your "MERLBRDF.hlsl" file.
    - In the "Source" slot, assign your "MERLBRDF.hlsl" file.
-   - Set "Name" exactly to "CalculateMerlTextureCoordinates".
-   - Set "Name" exactly to "CalculateMerlTextureCoordinates".
+   - Set "Name" exactly to "CalculateMERLTextureCoordinates".
+   - Set "Name" exactly to "CalculateMERLTextureCoordinates".
 3. Under the "Inputs" list, add 3 items:
 3. Under the "Inputs" list, add 3 items:
    - Name: light_direction, Type: Vector 3
@@ -155,8 +155,8 @@ STEP 7: FINAL OUTPUT
 STEP 8: USE THE SHADER
 STEP 8: USE THE SHADER
 --------------------------------------------------------------------------------
-1. In the Project window, right-click your new "Merl_BRDF_Shader" asset.
-1. In the Project window, right-click your new "Merl_BRDF_Shader" asset.
+1. In the Project window, right-click your new "MERL_BRDF_Shader" asset.
+1. In the Project window, right-click your new "MERL_BRDF_Shader" asset.
 2. Select Create -> Material. This creates a Material using your custom shader.
 2. Select Create -> Material. This creates a Material using your custom shader.
 3. Select the Material and assign your imported 3D .exr texture to the

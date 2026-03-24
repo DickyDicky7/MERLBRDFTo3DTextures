@@ -30,8 +30,8 @@
 //  // Outputs:
     // out_texture_coordinates = Float3 containing the [0..1] texture coordinates for the Sample Texture 3D node
 //  // out_texture_coordinates = Float3 containing the [0..1] texture coordinates for the Sample Texture 3D node
-    void CalculateMerlTextureCoordinates_float(float3 light_direction, float3 view_direction, float3 surface_normal, out float3 out_texture_coordinates) {
-//  void CalculateMerlTextureCoordinates_float(float3 light_direction, float3 view_direction, float3 surface_normal, out float3 out_texture_coordinates) {
+    void CalculateMERLTextureCoordinates_float(float3 light_direction, float3 view_direction, float3 surface_normal, out float3 out_texture_coordinates) {
+//  void CalculateMERLTextureCoordinates_float(float3 light_direction, float3 view_direction, float3 surface_normal, out float3 out_texture_coordinates) {
         // 1. Calculate Half Vector
 //      // 1. Calculate Half Vector
         float3 half_vector = normalize(light_direction + view_direction);
