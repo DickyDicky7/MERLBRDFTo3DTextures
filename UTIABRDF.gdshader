@@ -14,10 +14,10 @@
 //  // ---------------------------------------------------------------------------------
     // Important: When you import the UTIA BRDF PG14 EXR texture in Godot,
 //  // Important: When you import the UTIA BRDF PG14 EXR texture in Godot,
-    // make sure the Filter is set to "Linear" and Repeat is "Disabled"
-//  // make sure the Filter is set to "Linear" and Repeat is "Disabled"
-    uniform sampler2D utia_brdf_texture : source_color, filter_linear, repeat_disable;
-//  uniform sampler2D utia_brdf_texture : source_color, filter_linear, repeat_disable;
+    // make sure the Filter is set to "Nearest" and Repeat is "Disabled"
+//  // make sure the Filter is set to "Nearest" and Repeat is "Disabled"
+    uniform sampler2D utia_brdf_texture : source_color, filter_nearest, repeat_disable;
+//  uniform sampler2D utia_brdf_texture : source_color, filter_nearest, repeat_disable;
 
     uniform vec3 base_color_albedo : source_color = vec3(1.0, 1.0, 1.0);
 //  uniform vec3 base_color_albedo : source_color = vec3(1.0, 1.0, 1.0);
@@ -185,6 +185,12 @@
 //      float f_ipi = phi_i / phi_step;
         float ipi0 = floor(f_ipi);
 //      float ipi0 = floor(f_ipi);
+        if (ipi0 >= 48.0) {
+//      if (ipi0 >= 48.0) {
+            ipi0 = 0.0;
+//          ipi0 = 0.0;
+        }
+//      }
         float ipi1 = ipi0 + 1.0;
 //      float ipi1 = ipi0 + 1.0;
         float wpi1 = fract(f_ipi);
@@ -202,6 +208,12 @@
 //      float f_ipv = phi_v / phi_step;
         float ipv0 = floor(f_ipv);
 //      float ipv0 = floor(f_ipv);
+        if (ipv0 >= 48.0) {
+//      if (ipv0 >= 48.0) {
+            ipv0 = 0.0;
+//          ipv0 = 0.0;
+        }
+//      }
         float ipv1 = ipv0 + 1.0;
 //      float ipv1 = ipv0 + 1.0;
         float wpv1 = fract(f_ipv);
