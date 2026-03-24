@@ -123,8 +123,17 @@
         }
 //      }
         
-        // 3. Map to UTIA 288x288 Indices
-//      // 3. Map to UTIA 288x288 Indices
+        // We need to match lookup_brdf_val logic from C++ TBRDF.cpp
+//      // We need to match lookup_brdf_val logic from C++ TBRDF.cpp
+        float theta_i = theta_L;
+//      float theta_i = theta_L;
+        float theta_v = theta_V;
+//      float theta_v = theta_V;
+        float phi_i = phi_L;
+//      float phi_i = phi_L;
+        float phi_v = phi_V;
+//      float phi_v = phi_V;
+        
         // Elevation steps: 15 degrees = PI / 12 radians
 //      // Elevation steps: 15 degrees = PI / 12 radians
         float theta_step = PI / 12.0;
@@ -134,45 +143,152 @@
         float phi_step = PI / 24.0;
 //      float phi_step = PI / 24.0;
         
-        // Elevation index: 0 to 5 (6 levels)
-//      // Elevation index: 0 to 5 (6 levels)
-        float theta_idx_L = clamp(round(theta_L / theta_step), 0.0, 5.0);
-//      float theta_idx_L = clamp(round(theta_L / theta_step), 0.0, 5.0);
-        float theta_idx_V = clamp(round(theta_V / theta_step), 0.0, 5.0);
-//      float theta_idx_V = clamp(round(theta_V / theta_step), 0.0, 5.0);
+        float f_iti = theta_i / theta_step;
+//      float f_iti = theta_i / theta_step;
+        float iti0 = floor(f_iti);
+//      float iti0 = floor(f_iti);
+        float iti1 = iti0 + 1.0;
+//      float iti1 = iti0 + 1.0;
+        if (iti0 > 4.0) {
+//      if (iti0 > 4.0) {
+            iti0 = 4.0;
+//          iti0 = 4.0;
+            iti1 = 5.0;
+//          iti1 = 5.0;
+        }
+//      }
+        float wti1 = (theta_i - (theta_step * iti0)) / theta_step;
+//      float wti1 = (theta_i - (theta_step * iti0)) / theta_step;
+        float wti0 = 1.0 - wti1;
+//      float wti0 = 1.0 - wti1;
         
-        // Azimuth index: 0 to 47 (48 levels)
-//      // Azimuth index: 0 to 47 (48 levels)
-        float phi_idx_L = mod(round(phi_L / phi_step), 48.0);
-//      float phi_idx_L = mod(round(phi_L / phi_step), 48.0);
-        float phi_idx_V = mod(round(phi_V / phi_step), 48.0);
-//      float phi_idx_V = mod(round(phi_V / phi_step), 48.0);
+        float f_itv = theta_v / theta_step;
+//      float f_itv = theta_v / theta_step;
+        float itv0 = floor(f_itv);
+//      float itv0 = floor(f_itv);
+        float itv1 = itv0 + 1.0;
+//      float itv1 = itv0 + 1.0;
+        if (itv0 > 4.0) {
+//      if (itv0 > 4.0) {
+            itv0 = 4.0;
+//          itv0 = 4.0;
+            itv1 = 5.0;
+//          itv1 = 5.0;
+        }
+//      }
+        float wtv1 = (theta_v - (theta_step * itv0)) / theta_step;
+//      float wtv1 = (theta_v - (theta_step * itv0)) / theta_step;
+        float wtv0 = 1.0 - wtv1;
+//      float wtv0 = 1.0 - wtv1;
         
-        // Combine to linear index (0 to 287)
-//      // Combine to linear index (0 to 287)
-        float idx_L = theta_idx_L * 48.0 + phi_idx_L;
-//      float idx_L = theta_idx_L * 48.0 + phi_idx_L;
-        float idx_V = theta_idx_V * 48.0 + phi_idx_V;
-//      float idx_V = theta_idx_V * 48.0 + phi_idx_V;
+        float f_ipi = phi_i / phi_step;
+//      float f_ipi = phi_i / phi_step;
+        float ipi0 = floor(f_ipi);
+//      float ipi0 = floor(f_ipi);
+        float ipi1 = ipi0 + 1.0;
+//      float ipi1 = ipi0 + 1.0;
+        float wpi1 = fract(f_ipi);
+//      float wpi1 = fract(f_ipi);
+        float wpi0 = 1.0 - wpi1;
+//      float wpi0 = 1.0 - wpi1;
+        if (ipi1 >= 48.0) {
+//      if (ipi1 >= 48.0) {
+            ipi1 = 0.0;
+//          ipi1 = 0.0;
+        }
+//      }
         
-        // 4. Map to 2D Texture Coordinates (U, V)
-//      // 4. Map to 2D Texture Coordinates (U, V)
-        // Depending on EXR layout, usually rows=Illumination(L), cols=Viewing(V)
-//      // Depending on EXR layout, usually rows=Illumination(L), cols=Viewing(V)
-        // Using center of pixel (+ 0.5) to avoid sampling between pixels
-//      // Using center of pixel (+ 0.5) to avoid sampling between pixels
-        float texture_coord_u = (idx_V + 0.5) / 288.0;
-//      float texture_coord_u = (idx_V + 0.5) / 288.0;
-        float texture_coord_v = (idx_L + 0.5) / 288.0;
-//      float texture_coord_v = (idx_L + 0.5) / 288.0;
+        float f_ipv = phi_v / phi_step;
+//      float f_ipv = phi_v / phi_step;
+        float ipv0 = floor(f_ipv);
+//      float ipv0 = floor(f_ipv);
+        float ipv1 = ipv0 + 1.0;
+//      float ipv1 = ipv0 + 1.0;
+        float wpv1 = fract(f_ipv);
+//      float wpv1 = fract(f_ipv);
+        float wpv0 = 1.0 - wpv1;
+//      float wpv0 = 1.0 - wpv1;
+        if (ipv1 >= 48.0) {
+//      if (ipv1 >= 48.0) {
+            ipv1 = 0.0;
+//          ipv1 = 0.0;
+        }
+//      }
         
-        vec2 texture_coordinates_2d = vec2(clamp(texture_coord_u, 0.0, 1.0), clamp(texture_coord_v, 0.0, 1.0));
-//      vec2 texture_coordinates_2d = vec2(clamp(texture_coord_u, 0.0, 1.0), clamp(texture_coord_v, 0.0, 1.0));
+        float wti[2];
+//      float wti[2];
+        wti[0] = wti0; wti[1] = wti1;
+//      wti[0] = wti0; wti[1] = wti1;
+        float wtv[2];
+//      float wtv[2];
+        wtv[0] = wtv0; wtv[1] = wtv1;
+//      wtv[0] = wtv0; wtv[1] = wtv1;
+        float wpi[2];
+//      float wpi[2];
+        wpi[0] = wpi0; wpi[1] = wpi1;
+//      wpi[0] = wpi0; wpi[1] = wpi1;
+        float wpv[2];
+//      float wpv[2];
+        wpv[0] = wpv0; wpv[1] = wpv1;
+//      wpv[0] = wpv0; wpv[1] = wpv1;
         
-        // Sample the UTIA 2D Texture
-//      // Sample the UTIA 2D Texture
-        vec3 sampled_brdf_color = texture(utia_brdf_texture, texture_coordinates_2d).rgb;
-//      vec3 sampled_brdf_color = texture(utia_brdf_texture, texture_coordinates_2d).rgb;
+        float iti[2];
+//      float iti[2];
+        iti[0] = iti0; iti[1] = iti1;
+//      iti[0] = iti0; iti[1] = iti1;
+        float itv[2];
+//      float itv[2];
+        itv[0] = itv0; itv[1] = itv1;
+//      itv[0] = itv0; itv[1] = itv1;
+        float ipi[2];
+//      float ipi[2];
+        ipi[0] = ipi0; ipi[1] = ipi1;
+//      ipi[0] = ipi0; ipi[1] = ipi1;
+        float ipv[2];
+//      float ipv[2];
+        ipv[0] = ipv0; ipv[1] = ipv1;
+//      ipv[0] = ipv0; ipv[1] = ipv1;
+        
+        vec3 sampled_brdf_color = vec3(0.0);
+//      vec3 sampled_brdf_color = vec3(0.0);
+        
+        for (int i = 0; i < 2; i++) {
+//      for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 2; j++) {
+//          for (int j = 0; j < 2; j++) {
+                for (int k = 0; k < 2; k++) {
+//              for (int k = 0; k < 2; k++) {
+                    for (int l = 0; l < 2; l++) {
+//                  for (int l = 0; l < 2; l++) {
+                        float idx_L = iti[i] * 48.0 + ipi[k];
+//                      float idx_L = iti[i] * 48.0 + ipi[k];
+                        float idx_V = itv[j] * 48.0 + ipv[l];
+//                      float idx_V = itv[j] * 48.0 + ipv[l];
+                        
+                        // Depending on EXR layout, rows=Illumination(L), cols=Viewing(V)
+//                      // Depending on EXR layout, rows=Illumination(L), cols=Viewing(V)
+                        // Using center of pixel (+ 0.5) to avoid sampling between pixels
+//                      // Using center of pixel (+ 0.5) to avoid sampling between pixels
+                        float texture_coord_u = (idx_V + 0.5) / 288.0;
+//                      float texture_coord_u = (idx_V + 0.5) / 288.0;
+                        float texture_coord_v = (idx_L + 0.5) / 288.0;
+//                      float texture_coord_v = (idx_L + 0.5) / 288.0;
+                        
+                        vec2 texture_coordinates_2d = vec2(clamp(texture_coord_u, 0.0, 1.0), clamp(texture_coord_v, 0.0, 1.0));
+//                      vec2 texture_coordinates_2d = vec2(clamp(texture_coord_u, 0.0, 1.0), clamp(texture_coord_v, 0.0, 1.0));
+                        
+                        vec3 tex_val = textureLod(utia_brdf_texture, texture_coordinates_2d, 0.0).rgb;
+//                      vec3 tex_val = textureLod(utia_brdf_texture, texture_coordinates_2d, 0.0).rgb;
+                        sampled_brdf_color += tex_val * wti[i] * wtv[j] * wpi[k] * wpv[l];
+//                      sampled_brdf_color += tex_val * wti[i] * wtv[j] * wpi[k] * wpv[l];
+                    }
+//                  }
+                }
+//              }
+            }
+//          }
+        }
+//      }
         
         // The Rendering Equation: Radiance = BRDF * Light_Color * Attenuation * NdotL
 //      // The Rendering Equation: Radiance = BRDF * Light_Color * Attenuation * NdotL
