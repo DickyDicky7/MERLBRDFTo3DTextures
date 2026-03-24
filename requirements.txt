@@ -2,6 +2,8 @@ mypy
 mypy
 numpy
 numpy
+colorama
+colorama
 matplotlib
 matplotlib
 opencv-python
