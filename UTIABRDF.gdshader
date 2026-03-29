@@ -60,7 +60,7 @@
 //      METALLIC = environment_metallic;
         ROUGHNESS = environment_roughness;
 //      ROUGHNESS = environment_roughness;
-        
+
         // Pass the mesh tangent space to the light function
 //      // Pass the mesh tangent space to the light function
         custom_tangent = TANGENT;
@@ -86,14 +86,14 @@
 //      vec3 view_direction = VIEW;
         vec3 surface_normal = NORMAL;
 //      vec3 surface_normal = NORMAL;
-        
+
         // Transform Light and View vectors into local tangent space
 //      // Transform Light and View vectors into local tangent space
         vec3 local_L = vec3(dot(light_direction, custom_tangent), dot(light_direction, custom_binormal), dot(light_direction, surface_normal));
 //      vec3 local_L = vec3(dot(light_direction, custom_tangent), dot(light_direction, custom_binormal), dot(light_direction, surface_normal));
         vec3 local_V = vec3(dot(view_direction, custom_tangent), dot(view_direction, custom_binormal), dot(view_direction, surface_normal));
 //      vec3 local_V = vec3(dot(view_direction, custom_tangent), dot(view_direction, custom_binormal), dot(view_direction, surface_normal));
-        
+
         // 1. Calculate Elevation (Theta)
 //      // 1. Calculate Elevation (Theta)
         // Angle between the normal (Z in local space) and the vector
@@ -102,7 +102,7 @@
 //      float theta_L = acos(clamp(local_L.z, 0.0, 1.0));
         float theta_V = acos(clamp(local_V.z, 0.0, 1.0));
 //      float theta_V = acos(clamp(local_V.z, 0.0, 1.0));
-        
+
         // 2. Calculate Azimuth (Phi)
 //      // 2. Calculate Azimuth (Phi)
         float phi_L = atan(local_L.y, local_L.x);
@@ -113,7 +113,7 @@
 //          phi_L += 2.0 * PI;
         }
 //      }
-        
+
         float phi_V = atan(local_V.y, local_V.x);
 //      float phi_V = atan(local_V.y, local_V.x);
         if (phi_V < 0.0) {
@@ -122,7 +122,7 @@
 //          phi_V += 2.0 * PI;
         }
 //      }
-        
+
         // We need to match lookup_brdf_val logic from C++ TBRDF.cpp
 //      // We need to match lookup_brdf_val logic from C++ TBRDF.cpp
         float theta_i = theta_L;
@@ -133,7 +133,7 @@
 //      float phi_i = phi_L;
         float phi_v = phi_V;
 //      float phi_v = phi_V;
-        
+
         // Elevation steps: 15 degrees = PI / 12 radians
 //      // Elevation steps: 15 degrees = PI / 12 radians
         float theta_step = PI / 12.0;
@@ -142,7 +142,7 @@
 //      // Azimuth steps: 7.5 degrees = PI / 24 radians
         float phi_step = PI / 24.0;
 //      float phi_step = PI / 24.0;
-        
+
         float f_iti = theta_i / theta_step;
 //      float f_iti = theta_i / theta_step;
         float iti0 = floor(f_iti);
@@ -161,7 +161,7 @@
 //      float wti1 = (theta_i - (theta_step * iti0)) / theta_step;
         float wti0 = 1.0 - wti1;
 //      float wti0 = 1.0 - wti1;
-        
+
         float f_itv = theta_v / theta_step;
 //      float f_itv = theta_v / theta_step;
         float itv0 = floor(f_itv);
@@ -180,7 +180,7 @@
 //      float wtv1 = (theta_v - (theta_step * itv0)) / theta_step;
         float wtv0 = 1.0 - wtv1;
 //      float wtv0 = 1.0 - wtv1;
-        
+
         float f_ipi = phi_i / phi_step;
 //      float f_ipi = phi_i / phi_step;
         float ipi0 = floor(f_ipi);
@@ -203,7 +203,7 @@
 //          ipi1 = 0.0;
         }
 //      }
-        
+
         float f_ipv = phi_v / phi_step;
 //      float f_ipv = phi_v / phi_step;
         float ipv0 = floor(f_ipv);
@@ -226,7 +226,7 @@
 //          ipv1 = 0.0;
         }
 //      }
-        
+
         float wti[2];
 //      float wti[2];
         wti[0] = wti0; wti[1] = wti1;
@@ -243,7 +243,7 @@
 //      float wpv[2];
         wpv[0] = wpv0; wpv[1] = wpv1;
 //      wpv[0] = wpv0; wpv[1] = wpv1;
-        
+
         float iti[2];
 //      float iti[2];
         iti[0] = iti0; iti[1] = iti1;
@@ -260,10 +260,10 @@
 //      float ipv[2];
         ipv[0] = ipv0; ipv[1] = ipv1;
 //      ipv[0] = ipv0; ipv[1] = ipv1;
-        
+
         vec3 sampled_brdf_color = vec3(0.0);
 //      vec3 sampled_brdf_color = vec3(0.0);
-        
+
         for (int i = 0; i < 2; i++) {
 //      for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 2; j++) {
@@ -276,7 +276,7 @@
 //                      float idx_L = iti[i] * 48.0 + ipi[k];
                         float idx_V = itv[j] * 48.0 + ipv[l];
 //                      float idx_V = itv[j] * 48.0 + ipv[l];
-                        
+
                         // Depending on EXR layout, rows=Illumination(L), cols=Viewing(V)
 //                      // Depending on EXR layout, rows=Illumination(L), cols=Viewing(V)
                         // Using center of pixel (+ 0.5) to avoid sampling between pixels
@@ -285,10 +285,10 @@
 //                      float texture_coord_u = (idx_V + 0.5) / 288.0;
                         float texture_coord_v = (idx_L + 0.5) / 288.0;
 //                      float texture_coord_v = (idx_L + 0.5) / 288.0;
-                        
+
                         vec2 texture_coordinates_2d = vec2(clamp(texture_coord_u, 0.0, 1.0), clamp(texture_coord_v, 0.0, 1.0));
 //                      vec2 texture_coordinates_2d = vec2(clamp(texture_coord_u, 0.0, 1.0), clamp(texture_coord_v, 0.0, 1.0));
-                        
+
                         vec3 tex_val = textureLod(utia_brdf_texture, texture_coordinates_2d, 0.0).rgb;
 //                      vec3 tex_val = textureLod(utia_brdf_texture, texture_coordinates_2d, 0.0).rgb;
                         sampled_brdf_color += tex_val * wti[i] * wtv[j] * wpi[k] * wpv[l];
@@ -301,12 +301,12 @@
 //          }
         }
 //      }
-        
+
         // The Rendering Equation: Radiance = BRDF * Light_Color * Attenuation * NdotL
 //      // The Rendering Equation: Radiance = BRDF * Light_Color * Attenuation * NdotL
         float normal_dot_light = max(dot(surface_normal, light_direction), 0.0);
 //      float normal_dot_light = max(dot(surface_normal, light_direction), 0.0);
-        
+
         // We assign it to SPECULAR_LIGHT to override standard PBR handling.
 //      // We assign it to SPECULAR_LIGHT to override standard PBR handling.
         SPECULAR_LIGHT += sampled_brdf_color * base_color_albedo * LIGHT_COLOR * ATTENUATION * normal_dot_light * exposure_multiplier;
