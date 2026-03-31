@@ -36,6 +36,13 @@
     uniform bool enable_custom_ambient_lighting = false;
 //  uniform bool enable_custom_ambient_lighting = false;
 
+    // Post-Processing and Stylization Properties
+//  // Post-Processing and Stylization Properties
+    // Defines stylistic overlays such as film grain noise.
+//  // Defines stylistic overlays such as film grain noise.
+    uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.05;
+//  uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.05;
+
     varying vec3 surface_hair_tangent;
 //  varying vec3 surface_hair_tangent;
     varying vec3 stored_raw_base_color;
@@ -58,6 +65,19 @@
     }
 //  }
 
+    // Generates a pseudo-random value based on a 2D input coordinate.
+//  // Generates a pseudo-random value based on a 2D input coordinate.
+    // This function is utilized to synthesize a static noise pattern for the grainy visual effect.
+//  // This function is utilized to synthesize a static noise pattern for the grainy visual effect.
+    float compute_random_grain_noise(vec2 input_screen_coordinate) {
+//  float compute_random_grain_noise(vec2 input_screen_coordinate) {
+        // Compute a pseudo-random float utilizing a dot product and sine function hash.
+//      // Compute a pseudo-random float utilizing a dot product and sine function hash.
+        return fract(sin(dot(input_screen_coordinate, vec2(12.9898, 78.233))) * 43758.5453);
+//      return fract(sin(dot(input_screen_coordinate, vec2(12.9898, 78.233))) * 43758.5453);
+    }
+//  }
+
     void vertex() {
 //  void vertex() {
         // Standard vertex transform pass.
@@ -73,6 +93,23 @@
 //      vec4 sampled_detail_texture = texture(detail_albedo_texture, UV * detail_texture_uv_scale);
         vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
 //      vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
+
+        // Calculate the pseudo-random grain noise using the fragment's screen UV coordinates.
+//      // Calculate the pseudo-random grain noise using the fragment's screen UV coordinates.
+        // This generates a high-frequency noise pattern to simulate film grain.
+//      // This generates a high-frequency noise pattern to simulate film grain.
+        float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV);
+//      float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV);
+
+        // Remap the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scale by the chosen intensity.
+//      // Remap the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scale by the chosen intensity.
+        float applied_grain_color_adjustment = (generated_grain_noise_value - 0.5) * film_grain_intensity;
+//      float applied_grain_color_adjustment = (generated_grain_noise_value - 0.5) * film_grain_intensity;
+
+        // Apply the computed grain adjustment uniformly across the RGB channels of the base color.
+//      // Apply the computed grain adjustment uniformly across the RGB channels of the base color.
+        calculated_base_color = clamp(calculated_base_color + vec3(applied_grain_color_adjustment), 0.0, 1.0);
+//      calculated_base_color = clamp(calculated_base_color + vec3(applied_grain_color_adjustment), 0.0, 1.0);
 
         // Store the raw base color for the light() function to optimize performance.
 //      // Store the raw base color for the light() function to optimize performance.
