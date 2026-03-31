@@ -40,8 +40,8 @@
 //  // Post-Processing and Stylization Properties
     // Defines stylistic overlays such as film grain noise.
 //  // Defines stylistic overlays such as film grain noise.
-    uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.05;
-//  uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.05;
+    uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.01;
+//  uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.01;
 
     varying vec3 surface_hair_tangent;
 //  varying vec3 surface_hair_tangent;
