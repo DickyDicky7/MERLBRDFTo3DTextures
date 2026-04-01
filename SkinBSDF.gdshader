@@ -34,6 +34,33 @@ shader_type spatial;
     uniform float skin_surface_microfacet_roughness : hint_range(0.0, 1.0) = 0.4;
 //  uniform float skin_surface_microfacet_roughness : hint_range(0.0, 1.0) = 0.4;
 
+    // --- Surface Moisture Properties ---
+//  // --- Surface Moisture Properties ---
+    // Toggles the calculation of surface moisture mechanics.
+//  // Toggles the calculation of surface moisture mechanics.
+    uniform bool enable_skin_surface_moisture = false;
+//  uniform bool enable_skin_surface_moisture = false;
+    // Controls the appearance of sweat, oil, or water on the skin surface.
+//  // Controls the appearance of sweat, oil, or water on the skin surface.
+    uniform float skin_surface_moisture_intensity : hint_range(0.0, 1.0) = 0.0;
+//  uniform float skin_surface_moisture_intensity : hint_range(0.0, 1.0) = 0.0;
+    // How smooth the wet areas are.
+//  // How smooth the wet areas are.
+    uniform float skin_surface_moisture_roughness : hint_range(0.0, 1.0) = 0.15;
+//  uniform float skin_surface_moisture_roughness : hint_range(0.0, 1.0) = 0.15;
+    // Boosts reflection in wet areas.
+//  // Boosts reflection in wet areas.
+    uniform float skin_surface_moisture_specular_multiplier : hint_range(1.0, 3.0) = 1.5;
+//  uniform float skin_surface_moisture_specular_multiplier : hint_range(1.0, 3.0) = 1.5;
+    // How much darker wet skin gets.
+//  // How much darker wet skin gets.
+    uniform float skin_surface_moisture_albedo_darkening : hint_range(0.0, 1.0) = 0.2;
+//  uniform float skin_surface_moisture_albedo_darkening : hint_range(0.0, 1.0) = 0.2;
+    // Optional mask for sweat patches.
+//  // Optional mask for sweat patches.
+    uniform sampler2D skin_surface_moisture_mask_texture : hint_default_white, filter_linear_mipmap;
+//  uniform sampler2D skin_surface_moisture_mask_texture : hint_default_white, filter_linear_mipmap;
+
     // Subsurface Scattering scale parameters controlling how light bleeds through the geometry.
 //  // Subsurface Scattering scale parameters controlling how light bleeds through the geometry.
     // Controls the overall size and spread of the subsurface scattering effect relative to the physical model scale.
@@ -72,6 +99,39 @@ shader_type spatial;
         vec3 calculated_final_skin_base_color = skin_base_albedo_color * sampled_skin_detail_texture_color.rgb;
 //      vec3 calculated_final_skin_base_color = skin_base_albedo_color * sampled_skin_detail_texture_color.rgb;
 
+        // --- Moisture Calculation ---
+//      // --- Moisture Calculation ---
+        // Default surface properties.
+//      // Default surface properties.
+        float applied_skin_surface_microfacet_roughness = skin_surface_microfacet_roughness;
+//      float applied_skin_surface_microfacet_roughness = skin_surface_microfacet_roughness;
+        float applied_skin_direct_specular_intensity = skin_direct_specular_intensity;
+//      float applied_skin_direct_specular_intensity = skin_direct_specular_intensity;
+
+        if (enable_skin_surface_moisture) {
+//      if (enable_skin_surface_moisture) {
+            // Sample the moisture mask to determine wet areas.
+//          // Sample the moisture mask to determine wet areas.
+            float sampled_skin_surface_moisture_mask = texture(skin_surface_moisture_mask_texture, UV).r * skin_surface_moisture_intensity;
+//          float sampled_skin_surface_moisture_mask = texture(skin_surface_moisture_mask_texture, UV).r * skin_surface_moisture_intensity;
+
+            // Darken Albedo based on moisture.
+//          // Darken Albedo based on moisture.
+            calculated_final_skin_base_color = mix(calculated_final_skin_base_color, calculated_final_skin_base_color * (1.0 - skin_surface_moisture_albedo_darkening), sampled_skin_surface_moisture_mask);
+//          calculated_final_skin_base_color = mix(calculated_final_skin_base_color, calculated_final_skin_base_color * (1.0 - skin_surface_moisture_albedo_darkening), sampled_skin_surface_moisture_mask);
+
+            // Adjust Roughness: Interpolate between base roughness and wet roughness.
+//          // Adjust Roughness: Interpolate between base roughness and wet roughness.
+            applied_skin_surface_microfacet_roughness = mix(skin_surface_microfacet_roughness, skin_surface_moisture_roughness, sampled_skin_surface_moisture_mask);
+//          applied_skin_surface_microfacet_roughness = mix(skin_surface_microfacet_roughness, skin_surface_moisture_roughness, sampled_skin_surface_moisture_mask);
+
+            // Adjust Specular: Boost specularity in wet areas.
+//          // Adjust Specular: Boost specularity in wet areas.
+            applied_skin_direct_specular_intensity = mix(skin_direct_specular_intensity, skin_direct_specular_intensity * skin_surface_moisture_specular_multiplier, sampled_skin_surface_moisture_mask);
+//          applied_skin_direct_specular_intensity = mix(skin_direct_specular_intensity, skin_direct_specular_intensity * skin_surface_moisture_specular_multiplier, sampled_skin_surface_moisture_mask);
+        }
+//      }
+
         // Pass the raw calculated base color to the light function via a varying variable.
 //      // Pass the raw calculated base color to the light function via a varying variable.
         // This optimization avoids redundant texture sampling during the per-pixel/per-light evaluation in the light() pass.
@@ -101,12 +161,19 @@ shader_type spatial;
 //      // Set the built-in PBR properties to properly interact with Godot's ambient, indirect lighting, and reflection probes.
         ALBEDO = calculated_final_skin_base_color;
 //      ALBEDO = calculated_final_skin_base_color;
-        ROUGHNESS = skin_surface_microfacet_roughness;
-//      ROUGHNESS = skin_surface_microfacet_roughness;
+
+        // Apply calculated roughness.
+//      // Apply calculated roughness.
+        ROUGHNESS = applied_skin_surface_microfacet_roughness;
+//      ROUGHNESS = applied_skin_surface_microfacet_roughness;
+
         METALLIC = 0.0; // Skin is a dielectric material, so metallic is strictly 0.0.
 //      METALLIC = 0.0; // Skin is a dielectric material, so metallic is strictly 0.0.
-        SPECULAR = skin_direct_specular_intensity;
-//      SPECULAR = skin_direct_specular_intensity;
+
+        // Apply calculated specular.
+//      // Apply calculated specular.
+        SPECULAR = applied_skin_direct_specular_intensity;
+//      SPECULAR = applied_skin_direct_specular_intensity;
     }
 //  }
 
