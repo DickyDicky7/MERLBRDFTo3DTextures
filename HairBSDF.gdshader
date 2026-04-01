@@ -38,6 +38,10 @@
 
     // Post-Processing and Stylization Properties
 //  // Post-Processing and Stylization Properties
+    // Toggles the film grain noise overlay.
+//  // Toggles the film grain noise overlay.
+    uniform bool enable_film_grain_noise = false;
+//  uniform bool enable_film_grain_noise = false;
     // Defines stylistic overlays such as film grain noise.
 //  // Defines stylistic overlays such as film grain noise.
     uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.01;
@@ -94,22 +98,26 @@
         vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
 //      vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
 
-        // Calculate the pseudo-random grain noise using the fragment's screen UV coordinates.
-//      // Calculate the pseudo-random grain noise using the fragment's screen UV coordinates.
-        // This generates a high-frequency noise pattern to simulate film grain.
-//      // This generates a high-frequency noise pattern to simulate film grain.
-        float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV);
-//      float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV);
+        if (enable_film_grain_noise) {
+//      if (enable_film_grain_noise) {
+            // Calculate the pseudo-random grain noise using the fragment's screen UV coordinates.
+//          // Calculate the pseudo-random grain noise using the fragment's screen UV coordinates.
+            // This generates a high-frequency noise pattern to simulate film grain.
+//          // This generates a high-frequency noise pattern to simulate film grain.
+            float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV);
+//          float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV);
 
-        // Remap the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scale by the chosen intensity.
-//      // Remap the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scale by the chosen intensity.
-        float applied_grain_color_adjustment = (generated_grain_noise_value - 0.5) * film_grain_intensity;
-//      float applied_grain_color_adjustment = (generated_grain_noise_value - 0.5) * film_grain_intensity;
+            // Remap the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scale by the chosen intensity.
+//          // Remap the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scale by the chosen intensity.
+            float applied_grain_color_adjustment = (generated_grain_noise_value - 0.5) * film_grain_intensity;
+//          float applied_grain_color_adjustment = (generated_grain_noise_value - 0.5) * film_grain_intensity;
 
-        // Apply the computed grain adjustment uniformly across the RGB channels of the base color.
-//      // Apply the computed grain adjustment uniformly across the RGB channels of the base color.
-        calculated_base_color = clamp(calculated_base_color + vec3(applied_grain_color_adjustment), 0.0, 1.0);
-//      calculated_base_color = clamp(calculated_base_color + vec3(applied_grain_color_adjustment), 0.0, 1.0);
+            // Apply the computed grain adjustment uniformly across the RGB channels of the base color.
+//          // Apply the computed grain adjustment uniformly across the RGB channels of the base color.
+            calculated_base_color = clamp(calculated_base_color + vec3(applied_grain_color_adjustment), 0.0, 1.0);
+//          calculated_base_color = clamp(calculated_base_color + vec3(applied_grain_color_adjustment), 0.0, 1.0);
+        }
+//      }
 
         // Store the raw base color for the light() function to optimize performance.
 //      // Store the raw base color for the light() function to optimize performance.
