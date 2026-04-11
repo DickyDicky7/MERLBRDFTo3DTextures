@@ -23,6 +23,19 @@ shader_type spatial;
     uniform vec2 skin_detail_texture_uv_coordinate_scale = vec2(1.0, 1.0);
 //  uniform vec2 skin_detail_texture_uv_coordinate_scale = vec2(1.0, 1.0);
 
+    // Normal map texture to add micro-surface details without adding geometry.
+//  // Normal map texture to add micro-surface details without adding geometry.
+    uniform sampler2D skin_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
+//  uniform sampler2D skin_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
+    // Scale factor to tile the normal map texture across the mesh surface.
+//  // Scale factor to tile the normal map texture across the mesh surface.
+    uniform vec2 skin_normal_map_texture_uv_coordinate_scale = vec2(1.0, 1.0);
+//  uniform vec2 skin_normal_map_texture_uv_coordinate_scale = vec2(1.0, 1.0);
+    // Overall strength of the normal map effect.
+//  // Overall strength of the normal map effect.
+    uniform float skin_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
+//  uniform float skin_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
+
     // Skin Specular Properties controlling the shiny reflection layer (using the GGX microfacet model).
 //  // Skin Specular Properties controlling the shiny reflection layer (using the GGX microfacet model).
     // Overall strength of the specular reflection on the skin surface.
@@ -174,6 +187,21 @@ shader_type spatial;
 //      // Apply calculated specular.
         SPECULAR = applied_skin_direct_specular_intensity;
 //      SPECULAR = applied_skin_direct_specular_intensity;
+
+        // Sample the normal map texture using the scaled UV coordinates.
+//      // Sample the normal map texture using the scaled UV coordinates.
+        vec3 sampled_skin_normal_map_color = texture(skin_normal_map_texture, UV * skin_normal_map_texture_uv_coordinate_scale).rgb;
+//      vec3 sampled_skin_normal_map_color = texture(skin_normal_map_texture, UV * skin_normal_map_texture_uv_coordinate_scale).rgb;
+
+        // Apply the normal map to the built-in PBR normal map property.
+//      // Apply the normal map to the built-in PBR normal map property.
+        NORMAL_MAP = sampled_skin_normal_map_color;
+//      NORMAL_MAP = sampled_skin_normal_map_color;
+
+        // Scale the intensity of the normal map effect.
+//      // Scale the intensity of the normal map effect.
+        NORMAL_MAP_DEPTH = skin_normal_map_intensity;
+//      NORMAL_MAP_DEPTH = skin_normal_map_intensity;
     }
 //  }
 
