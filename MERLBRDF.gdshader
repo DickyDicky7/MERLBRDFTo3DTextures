@@ -16,6 +16,8 @@
 //  // Important: When you import the MERL EXR atlas as a Texture3D in Godot,
     // make sure the Filter is set to "Linear" and Repeat is "Disabled"
 //  // make sure the Filter is set to "Linear" and Repeat is "Disabled"
+    // This should be imported in Godot as a 3D Texture with dimensions 180x90x90 (10 columns, 9 rows).
+//  // This should be imported in Godot as a 3D Texture with dimensions 180x90x90 (10 columns, 9 rows).
     uniform sampler3D merl_brdf_texture_atlas : source_color, filter_linear_mipmap, repeat_disable;
 //  uniform sampler3D merl_brdf_texture_atlas : source_color, filter_linear_mipmap, repeat_disable;
 

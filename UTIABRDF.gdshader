@@ -14,6 +14,8 @@
 //  // ---------------------------------------------------------------------------------
     // Important: When you import the UTIA BRDF PG14 EXR texture in Godot,
 //  // Important: When you import the UTIA BRDF PG14 EXR texture in Godot,
+    // This should be imported in Godot as a 2D Texture with dimensions 288x288.
+//  // This should be imported in Godot as a 2D Texture with dimensions 288x288.
     // make sure the Filter is set to "Nearest" and Repeat is "Disabled"
 //  // make sure the Filter is set to "Nearest" and Repeat is "Disabled"
     uniform sampler2D utia_brdf_texture : source_color, filter_nearest, repeat_disable;

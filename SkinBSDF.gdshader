@@ -1,4 +1,4 @@
-shader_type spatial;
+    shader_type spatial;
 //  shader_type spatial;
     render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 //  render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
@@ -7,6 +7,8 @@ shader_type spatial;
 //  // The 2D Pre-Integrated Skin Look-Up Table (LUT) baked from the pbrt-v3 BSSRDF model.
     // This texture maps the relationship between N.L (dot product of Normal and Light) and surface curvature to pre-calculated diffuse scattering.
 //  // This texture maps the relationship between N.L (dot product of Normal and Light) and surface curvature to pre-calculated diffuse scattering.
+    // This should be imported in Godot as a 2D Texture with dimensions 512x512.
+//  // This should be imported in Godot as a 2D Texture with dimensions 512x512.
     uniform sampler2D pre_integrated_skin_scattering_lut_texture : hint_default_black, filter_linear, repeat_disable;
 //  uniform sampler2D pre_integrated_skin_scattering_lut_texture : hint_default_black, filter_linear, repeat_disable;
 

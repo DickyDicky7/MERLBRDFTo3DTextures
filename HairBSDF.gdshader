@@ -7,6 +7,8 @@
 //  // The 3D texture containing the baked PBRT hair Bidirectional Scattering Distribution Function (BSDF)
     // This Look-Up Table (LUT) stores the precomputed complex hair scattering properties.
 //  // This Look-Up Table (LUT) stores the precomputed complex hair scattering properties.
+    // This should be imported in Godot as a 3D Texture with dimensions 64x64x64 (8 columns, 8 rows).
+//  // This should be imported in Godot as a 3D Texture with dimensions 64x64x64 (8 columns, 8 rows).
     uniform sampler3D hair_bsdf_texture_lut : hint_default_black, filter_linear, repeat_disable;
 //  uniform sampler3D hair_bsdf_texture_lut : hint_default_black, filter_linear, repeat_disable;
 
