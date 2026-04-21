@@ -45,6 +45,17 @@
     uniform float indirect_ambient_albedo_scale : hint_range(0.0, 1.0) = 1.0;
 //  uniform float indirect_ambient_albedo_scale : hint_range(0.0, 1.0) = 1.0;
 
+    // Ambient Occlusion Properties
+//  // Ambient Occlusion Properties
+    // Adds localized shadowing in creases and folds to ground the cloth visually.
+//  // Adds localized shadowing in creases and folds to ground the cloth visually.
+    uniform bool enable_ambient_occlusion = false;
+//  uniform bool enable_ambient_occlusion = false;
+    uniform sampler2D ambient_occlusion_texture : hint_default_white, filter_linear_mipmap, repeat_enable;
+//  uniform sampler2D ambient_occlusion_texture : hint_default_white, filter_linear_mipmap, repeat_enable;
+    uniform float ambient_occlusion_strength : hint_range(0.0, 1.0) = 1.0;
+//  uniform float ambient_occlusion_strength : hint_range(0.0, 1.0) = 1.0;
+
     varying vec3 stored_raw_base_color;
 //  varying vec3 stored_raw_base_color;
 
@@ -63,6 +74,19 @@
 //      NORMAL_MAP_DEPTH = detail_normal_depth;
         vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
 //      vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
+
+        // Apply Ambient Occlusion if enabled.
+//      // Apply Ambient Occlusion if enabled.
+        if (enable_ambient_occlusion) {
+//      if (enable_ambient_occlusion) {
+            float sampled_ao = texture(ambient_occlusion_texture, UV * detail_texture_uv_scale).r;
+//          float sampled_ao = texture(ambient_occlusion_texture, UV * detail_texture_uv_scale).r;
+            AO = mix(1.0, sampled_ao, ambient_occlusion_strength);
+//          AO = mix(1.0, sampled_ao, ambient_occlusion_strength);
+            AO_LIGHT_AFFECT = 1.0;
+//          AO_LIGHT_AFFECT = 1.0;
+        }
+//      }
 
         // Store the raw base color for the light() function to optimize performance.
 //      // Store the raw base color for the light() function to optimize performance.
