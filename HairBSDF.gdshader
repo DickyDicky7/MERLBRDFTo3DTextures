@@ -25,6 +25,19 @@
     uniform float direct_specular_intensity : hint_range(0.0, 5.0) = 0.3;
 //  uniform float direct_specular_intensity : hint_range(0.0, 5.0) = 0.3;
 
+    // Normal map texture to add micro-surface details without adding geometry.
+//  // Normal map texture to add micro-surface details without adding geometry.
+    uniform sampler2D hair_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
+//  uniform sampler2D hair_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
+    // Scale factor to tile the normal map texture across the mesh surface.
+//  // Scale factor to tile the normal map texture across the mesh surface.
+    uniform vec2 hair_normal_map_texture_uv_coordinate_scale = vec2(1.0, 1.0);
+//  uniform vec2 hair_normal_map_texture_uv_coordinate_scale = vec2(1.0, 1.0);
+    // Overall strength of the normal map effect.
+//  // Overall strength of the normal map effect.
+    uniform float hair_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
+//  uniform float hair_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
+
     // Advanced Lighting and Shading Properties
 //  // Advanced Lighting and Shading Properties
     // Controls how the hair reacts to both direct light sources and indirect ambient lighting.
@@ -184,6 +197,21 @@
 //      ROUGHNESS = 1.0;
         METALLIC = 0.0;
 //      METALLIC = 0.0;
+
+        // Sample the normal map texture using the scaled UV coordinates.
+//      // Sample the normal map texture using the scaled UV coordinates.
+        vec3 sampled_hair_normal_map_color = texture(hair_normal_map_texture, UV * hair_normal_map_texture_uv_coordinate_scale).rgb;
+//      vec3 sampled_hair_normal_map_color = texture(hair_normal_map_texture, UV * hair_normal_map_texture_uv_coordinate_scale).rgb;
+
+        // Apply the normal map to the built-in PBR normal map property.
+//      // Apply the normal map to the built-in PBR normal map property.
+        NORMAL_MAP = sampled_hair_normal_map_color;
+//      NORMAL_MAP = sampled_hair_normal_map_color;
+
+        // Scale the intensity of the normal map effect.
+//      // Scale the intensity of the normal map effect.
+        NORMAL_MAP_DEPTH = hair_normal_map_intensity;
+//      NORMAL_MAP_DEPTH = hair_normal_map_intensity;
     }
 //  }
 
