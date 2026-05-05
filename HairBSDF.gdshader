@@ -38,6 +38,19 @@
     uniform float hair_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
 //  uniform float hair_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
 
+    // Ambient Occlusion Properties
+//  // Ambient Occlusion Properties
+    // Adds localized shadowing to ground the hair strands and simulate self-occlusion.
+//  // Adds localized shadowing to ground the hair strands and simulate self-occlusion.
+    uniform bool enable_hair_ambient_occlusion = false;
+//  uniform bool enable_hair_ambient_occlusion = false;
+    uniform sampler2D hair_ambient_occlusion_texture : hint_default_white, filter_linear_mipmap, repeat_enable;
+//  uniform sampler2D hair_ambient_occlusion_texture : hint_default_white, filter_linear_mipmap, repeat_enable;
+    uniform float hair_ambient_occlusion_intensity : hint_range(0.0, 1.0) = 1.0;
+//  uniform float hair_ambient_occlusion_intensity : hint_range(0.0, 1.0) = 1.0;
+    uniform vec2 hair_ambient_occlusion_uv_coordinate_scale = vec2(1.0, 1.0);
+//  uniform vec2 hair_ambient_occlusion_uv_coordinate_scale = vec2(1.0, 1.0);
+
     // Advanced Lighting and Shading Properties
 //  // Advanced Lighting and Shading Properties
     // Controls how the hair reacts to both direct light sources and indirect ambient lighting.
@@ -113,6 +126,37 @@
         vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
 //      vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
 
+        // --- Ambient Occlusion Calculation ---
+//      // --- Ambient Occlusion Calculation ---
+        // Initialize a baseline AO value representing no occlusion.
+//      // Initialize a baseline AO value representing no occlusion.
+        float applied_ao_value = 1.0;
+//      float applied_ao_value = 1.0;
+
+        if (enable_hair_ambient_occlusion) {
+//      if (enable_hair_ambient_occlusion) {
+            // Sample the AO texture using the dedicated scaling uniform.
+//          // Sample the AO texture using the dedicated scaling uniform.
+            float sampled_hair_ao = texture(hair_ambient_occlusion_texture, UV * hair_ambient_occlusion_uv_coordinate_scale).r;
+//          float sampled_hair_ao = texture(hair_ambient_occlusion_texture, UV * hair_ambient_occlusion_uv_coordinate_scale).r;
+
+            // Interpolate between the un-occluded baseline (1.0) and the sampled value based on the strength uniform.
+//          // Interpolate between the un-occluded baseline (1.0) and the sampled value based on the strength uniform.
+            applied_ao_value = mix(1.0, sampled_hair_ao, hair_ambient_occlusion_intensity);
+//          applied_ao_value = mix(1.0, sampled_hair_ao, hair_ambient_occlusion_intensity);
+
+            // Assign to Godot's built-in AO property to affect standard indirect and ambient lighting.
+//          // Assign to Godot's built-in AO property to affect standard indirect and ambient lighting.
+            AO = applied_ao_value;
+//          AO = applied_ao_value;
+
+            // Ensure AO also affects direct light sources to enhance the grounding of folds and deep geometry.
+//          // Ensure AO also affects direct light sources to enhance the grounding of folds and deep geometry.
+            AO_LIGHT_AFFECT = 1.0;
+//          AO_LIGHT_AFFECT = 1.0;
+        }
+//      }
+
         if (enable_film_grain_noise) {
 //      if (enable_film_grain_noise) {
             // Calculate the pseudo-random grain noise using the fragment's screen UV coordinates.
@@ -176,8 +220,11 @@
 //          vec3 normalized_view_direction = normalize(VIEW);
             vec3 computed_custom_ambient = compute_custom_ambient_lighting(calculated_base_color, NORMAL, normalized_hair_tangent, normalized_view_direction);
 //          vec3 computed_custom_ambient = compute_custom_ambient_lighting(calculated_base_color, NORMAL, normalized_hair_tangent, normalized_view_direction);
-            EMISSION = computed_custom_ambient;
-//          EMISSION = computed_custom_ambient;
+            
+            // Multiply the custom ambient result by the AO value to ensure consistent shadowing across lighting modes.
+//          // Multiply the custom ambient result by the AO value to ensure consistent shadowing across lighting modes.
+            EMISSION = computed_custom_ambient * applied_ao_value;
+//          EMISSION = computed_custom_ambient * applied_ao_value;
         } else {
 //      } else {
             // Albedo drives the base color in Godot's forward pass for ambient and indirect light calculation.
