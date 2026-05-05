@@ -12,12 +12,63 @@
     uniform sampler3D hair_bsdf_texture_lut : hint_default_black, filter_linear, repeat_disable;
 //  uniform sampler3D hair_bsdf_texture_lut : hint_default_black, filter_linear, repeat_disable;
 
+    // --- Two-Pass Transparency Setup & Documentation ---
+//  // --- Two-Pass Transparency Setup & Documentation ---
+    // Mechanism & Algorithm:
+//  // Mechanism & Algorithm:
+    // Real-time rasterizers struggle to properly sort complex overlapping transparent geometry (like hair strands).
+//  // Real-time rasterizers struggle to properly sort complex overlapping transparent geometry (like hair strands).
+    // The Two-Pass system solves this by breaking the rendering into two distinct stages:
+//  // The Two-Pass system solves this by breaking the rendering into two distinct stages:
+    // 1. Pass 1 (Opaque Core): Renders only the dense, opaque parts of the hair (Alpha >= Threshold) to the depth buffer.
+//  // 1. Pass 1 (Opaque Core): Renders only the dense, opaque parts of the hair (Alpha >= Threshold) to the depth buffer.
+    //    This pass discards the soft, wispy edges. Because it writes to depth, it perfectly occludes geometry behind it.
+//  //    This pass discards the soft, wispy edges. Because it writes to depth, it perfectly occludes geometry behind it.
+    // 2. Pass 2 (Soft Fringes): Renders only the soft, transparent edges (Alpha < Threshold) over the top.
+//  // 2. Pass 2 (Soft Fringes): Renders only the soft, transparent edges (Alpha < Threshold) over the top.
+    //    It discards the dense core to prevent overdraw. Because Pass 1 already wrote depth, these transparent edges
+//  //    It discards the dense core to prevent overdraw. Because Pass 1 already wrote depth, these transparent edges
+    //    will perfectly sort against the underlying solid hair structures.
+//  //    will perfectly sort against the underlying solid hair structures.
+    //
+//  //
+    // How to Setup in Godot:
+//  // How to Setup in Godot:
+    // Option A: Mode 0 (Single Pass Soft)
+//  // Option A: Mode 0 (Single Pass Soft)
+    // - Use this if you don't care about perfect depth sorting, and just want soft blending.
+//  // - Use this if you don't care about perfect depth sorting, and just want soft blending.
+    // - Set render_pass_mode to 0 on your primary material.
+//  // - Set render_pass_mode to 0 on your primary material.
+    //
+//  //
+    // Option B: Mode 1 + Mode 2 (Perfect Two-Pass Sorting)
+//  // Option B: Mode 1 + Mode 2 (Perfect Two-Pass Sorting)
+    // - 1. Apply a material with this shader to your mesh. Set render_pass_mode to 1. Set opaque_core_threshold to ~0.5.
+//  // - 1. Apply a material with this shader to your mesh. Set render_pass_mode to 1. Set opaque_core_threshold to ~0.5.
+    // - 2. Go to the "Next Pass" property of that material and add a *new* ShaderMaterial using this exact same shader.
+//  // - 2. Go to the "Next Pass" property of that material and add a *new* ShaderMaterial using this exact same shader.
+    // - 3. On the Next Pass material, set render_pass_mode to 2. Match the opaque_core_threshold to the first material.
+//  // - 3. On the Next Pass material, set render_pass_mode to 2. Match the opaque_core_threshold to the first material.
+    // ---------------------------------------------------
+//  // ---------------------------------------------------
+
+    // 0 = Single Pass Soft (Original), 1 = Pass 1 (Opaque Core), 2 = Pass 2 (Soft Fringes)
+//  // 0 = Single Pass Soft (Original), 1 = Pass 1 (Opaque Core), 2 = Pass 2 (Soft Fringes)
+    uniform int render_pass_mode : hint_range(0, 2, 1) = 0;
+//  uniform int render_pass_mode : hint_range(0, 2, 1) = 0;
+    
+    // The alpha threshold for the opaque core pass (Pass 1).
+//  // The alpha threshold for the opaque core pass (Pass 1).
+    uniform float opaque_core_threshold : hint_range(0.0, 1.0) = 0.5;
+//  uniform float opaque_core_threshold : hint_range(0.0, 1.0) = 0.5;
+
     // Basic Hair Material Properties
 //  // Basic Hair Material Properties
     // Defines the foundational visual characteristics of the hair surface.
 //  // Defines the foundational visual characteristics of the hair surface.
-    uniform vec3 base_albedo_color : source_color = vec3(1.0, 1.0, 1.0);
-//  uniform vec3 base_albedo_color : source_color = vec3(1.0, 1.0, 1.0);
+    uniform vec4 base_albedo_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+//  uniform vec4 base_albedo_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
     uniform sampler2D detail_albedo_texture : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
 //  uniform sampler2D detail_albedo_texture : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
     uniform vec2 detail_texture_uv_scale = vec2(1.0, 1.0);
@@ -123,8 +174,8 @@
 //  void fragment() {
         vec4 sampled_detail_texture = texture(detail_albedo_texture, UV * detail_texture_uv_scale);
 //      vec4 sampled_detail_texture = texture(detail_albedo_texture, UV * detail_texture_uv_scale);
-        vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
-//      vec3 calculated_base_color = base_albedo_color * sampled_detail_texture.rgb;
+        vec3 calculated_base_color = base_albedo_color.rgb * sampled_detail_texture.rgb;
+//      vec3 calculated_base_color = base_albedo_color.rgb * sampled_detail_texture.rgb;
 
         // --- Ambient Occlusion Calculation ---
 //      // --- Ambient Occlusion Calculation ---
@@ -185,10 +236,39 @@
         stored_raw_base_color = calculated_base_color;
 //      stored_raw_base_color = calculated_base_color;
 
-        // Apply alpha from the detail texture to determine hair transparency and sorting.
-//      // Apply alpha from the detail texture to determine hair transparency and sorting.
-        ALPHA = sampled_detail_texture.a;
-//      ALPHA = sampled_detail_texture.a;
+        // Apply alpha from the detail texture and base color to determine hair transparency and sorting.
+//      // Apply alpha from the detail texture and base color to determine hair transparency and sorting.
+        ALPHA = base_albedo_color.a * sampled_detail_texture.a;
+//      ALPHA = base_albedo_color.a * sampled_detail_texture.a;
+
+        // --- Two-Pass Transparency Logic ---
+//      // --- Two-Pass Transparency Logic ---
+        if (render_pass_mode == 1) {
+//      if (render_pass_mode == 1) {
+            // Pass 1: Opaque Core. Discard soft fringes to write only the solid core to the depth buffer.
+//          // Pass 1: Opaque Core. Discard soft fringes to write only the solid core to the depth buffer.
+            if (ALPHA < opaque_core_threshold) {
+//          if (ALPHA < opaque_core_threshold) {
+                discard;
+//              discard;
+            }
+//          }
+            // Force full opacity for the core to ensure perfect depth writing and shadow casting.
+//          // Force full opacity for the core to ensure perfect depth writing and shadow casting.
+            ALPHA = 1.0;
+//          ALPHA = 1.0;
+        } else if (render_pass_mode == 2) {
+//      } else if (render_pass_mode == 2) {
+            // Pass 2: Soft Fringes. Only render the soft transparent areas, discarding the core to avoid overdraw.
+//          // Pass 2: Soft Fringes. Only render the soft transparent areas, discarding the core to avoid overdraw.
+            if (ALPHA >= opaque_core_threshold) {
+//          if (ALPHA >= opaque_core_threshold) {
+                discard;
+//              discard;
+            }
+//          }
+        }
+//      }
 
         // Define the orientation of the hair strands for anisotropic highlights.
 //      // Define the orientation of the hair strands for anisotropic highlights.
