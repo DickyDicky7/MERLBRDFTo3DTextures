@@ -55,6 +55,10 @@
 //  uniform sampler2D ambient_occlusion_texture : hint_default_white, filter_linear_mipmap, repeat_enable;
     uniform float ambient_occlusion_strength : hint_range(0.0, 1.0) = 1.0;
 //  uniform float ambient_occlusion_strength : hint_range(0.0, 1.0) = 1.0;
+    // Scale factor to tile the ambient occlusion texture across the mesh surface.
+//  // Scale factor to tile the ambient occlusion texture across the mesh surface.
+    uniform vec2 ambient_occlusion_uv_scale = vec2(1.0, 1.0);
+//  uniform vec2 ambient_occlusion_uv_scale = vec2(1.0, 1.0);
 
     varying vec3 stored_raw_base_color;
 //  varying vec3 stored_raw_base_color;
@@ -79,8 +83,8 @@
 //      // Apply Ambient Occlusion if enabled.
         if (enable_ambient_occlusion) {
 //      if (enable_ambient_occlusion) {
-            float sampled_ao = texture(ambient_occlusion_texture, UV * detail_texture_uv_scale).r;
-//          float sampled_ao = texture(ambient_occlusion_texture, UV * detail_texture_uv_scale).r;
+            float sampled_ao = texture(ambient_occlusion_texture, UV * ambient_occlusion_uv_scale).r;
+//          float sampled_ao = texture(ambient_occlusion_texture, UV * ambient_occlusion_uv_scale).r;
             AO = mix(1.0, sampled_ao, ambient_occlusion_strength);
 //          AO = mix(1.0, sampled_ao, ambient_occlusion_strength);
             AO_LIGHT_AFFECT = 1.0;
