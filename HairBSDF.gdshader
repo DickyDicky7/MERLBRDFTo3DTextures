@@ -1,7 +1,7 @@
     shader_type spatial;
 //  shader_type spatial;
-    render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_disabled, depth_prepass_alpha;
-//  render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specular_disabled, depth_prepass_alpha;
+    render_mode blend_mix, depth_draw_opaque, cull_disabled, specular_disabled, depth_prepass_alpha;
+//  render_mode blend_mix, depth_draw_opaque, cull_disabled, specular_disabled, depth_prepass_alpha;
 
     // A 3D texture containing the baked PBRT hair Bidirectional Scattering Distribution Function (BSDF).
 //  // A 3D texture containing the baked PBRT hair Bidirectional Scattering Distribution Function (BSDF).
@@ -38,6 +38,12 @@
 //  // Option A: Mode 0 (Single Pass Soft)
     // - Use this mode if perfect depth sorting is unnecessary, and you only require soft blending.
 //  // - Use this mode if perfect depth sorting is unnecessary, and you only require soft blending.
+    // - WARNING: Mode 0 has inherent transparency sorting artifacts with overlapping hair geometry
+//  // - WARNING: Mode 0 has inherent transparency sorting artifacts with overlapping hair geometry
+    // -   due to depth_prepass_alpha writing depth for semi-transparent fragments.
+//  // -   due to depth_prepass_alpha writing depth for semi-transparent fragments.
+    // -   For correct sorting, use Option B (Mode 1 + Mode 2) instead.
+//  // -   For correct sorting, use Option B (Mode 1 + Mode 2) instead.
     // - Set render_pass_mode to 0 on your primary material.
 //  // - Set render_pass_mode to 0 on your primary material.
     //
@@ -55,29 +61,38 @@
 
     // 0 = Single Pass Soft (Original), 1 = Pass 1 (Opaque Core), 2 = Pass 2 (Soft Fringes).
 //  // 0 = Single Pass Soft (Original), 1 = Pass 1 (Opaque Core), 2 = Pass 2 (Soft Fringes).
+    group_uniforms transparency;
+//  group_uniforms transparency;
     uniform int render_pass_mode : hint_range(0, 2, 1) = 0;
 //  uniform int render_pass_mode : hint_range(0, 2, 1) = 0;
-
     // Specifies the alpha threshold for the opaque core pass (Pass 1).
 //  // Specifies the alpha threshold for the opaque core pass (Pass 1).
     uniform float opaque_core_threshold : hint_range(0.0, 1.0) = 0.5;
 //  uniform float opaque_core_threshold : hint_range(0.0, 1.0) = 0.5;
+    group_uniforms;
+//  group_uniforms;
 
     // Basic hair material properties.
 //  // Basic hair material properties.
     // These properties define the foundational visual characteristics of the hair surface.
 //  // These properties define the foundational visual characteristics of the hair surface.
+    group_uniforms base_color;
+//  group_uniforms base_color;
     uniform vec4 base_albedo_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 //  uniform vec4 base_albedo_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
     uniform sampler2D detail_albedo_texture : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
 //  uniform sampler2D detail_albedo_texture : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
     uniform vec2 detail_texture_uv_scale = vec2(1.0, 1.0);
 //  uniform vec2 detail_texture_uv_scale = vec2(1.0, 1.0);
-    uniform float direct_specular_intensity : hint_range(0.0, 5.0) = 0.3;
-//  uniform float direct_specular_intensity : hint_range(0.0, 5.0) = 0.3;
+    uniform float direct_bsdf_intensity : hint_range(0.0, 5.0) = 0.3;
+//  uniform float direct_bsdf_intensity : hint_range(0.0, 5.0) = 0.3;
+    group_uniforms;
+//  group_uniforms;
 
     // A normal map texture that adds micro-surface details without requiring additional geometry.
 //  // A normal map texture that adds micro-surface details without requiring additional geometry.
+    group_uniforms normal_map;
+//  group_uniforms normal_map;
     uniform sampler2D hair_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
 //  uniform sampler2D hair_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
     // A scale factor used to tile the normal map texture across the mesh surface.
@@ -88,11 +103,15 @@
 //  // The overall strength of the normal map effect.
     uniform float hair_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
 //  uniform float hair_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
+    group_uniforms;
+//  group_uniforms;
 
     // Ambient occlusion properties.
 //  // Ambient occlusion properties.
     // These properties add localized shadowing to ground the hair strands and simulate self-occlusion.
 //  // These properties add localized shadowing to ground the hair strands and simulate self-occlusion.
+    group_uniforms ambient_occlusion;
+//  group_uniforms ambient_occlusion;
     uniform bool enable_hair_ambient_occlusion = false;
 //  uniform bool enable_hair_ambient_occlusion = false;
     uniform sampler2D hair_ambient_occlusion_texture : hint_default_white, filter_linear_mipmap, repeat_enable;
@@ -101,32 +120,48 @@
 //  uniform float hair_ambient_occlusion_intensity : hint_range(0.0, 1.0) = 1.0;
     uniform vec2 hair_ambient_occlusion_uv_coordinate_scale = vec2(1.0, 1.0);
 //  uniform vec2 hair_ambient_occlusion_uv_coordinate_scale = vec2(1.0, 1.0);
+    group_uniforms;
+//  group_uniforms;
 
     // Advanced lighting and shading properties.
 //  // Advanced lighting and shading properties.
     // These properties control how the hair reacts to direct light sources and indirect ambient lighting.
 //  // These properties control how the hair reacts to direct light sources and indirect ambient lighting.
+    group_uniforms lighting;
+//  group_uniforms lighting;
     uniform float indirect_ambient_albedo_scale : hint_range(0.0, 1.0) = 1.0;
 //  uniform float indirect_ambient_albedo_scale : hint_range(0.0, 1.0) = 1.0;
-    uniform float direct_light_albedo_scale : hint_range(1.0, 100.0) = 100.0;
-//  uniform float direct_light_albedo_scale : hint_range(1.0, 100.0) = 100.0;
+    uniform float direct_light_intensity_scale : hint_range(0.0, 100.0) = 100.0;
+//  uniform float direct_light_intensity_scale : hint_range(0.0, 100.0) = 100.0;
     // Controls the intensity of light passing through the hair volume.
 //  // Controls the intensity of light passing through the hair volume.
-    uniform float backlight_transmission_intensity : hint_range(0.0, 2.0) = 2.0;
-//  uniform float backlight_transmission_intensity : hint_range(0.0, 2.0) = 2.0;
+    uniform float backlight_transmission_intensity : hint_range(0.0, 2.0) = 1.0;
+//  uniform float backlight_transmission_intensity : hint_range(0.0, 2.0) = 1.0;
     uniform bool enable_custom_ambient_lighting = false;
 //  uniform bool enable_custom_ambient_lighting = false;
+    uniform vec3 custom_ambient_color : source_color = vec3(0.05, 0.05, 0.05);
+//  uniform vec3 custom_ambient_color : source_color = vec3(0.05, 0.05, 0.05);
+    group_uniforms;
+//  group_uniforms;
 
     // Post-processing and stylization properties.
 //  // Post-processing and stylization properties.
     // This property toggles the film grain noise overlay.
 //  // This property toggles the film grain noise overlay.
+    group_uniforms post_processing;
+//  group_uniforms post_processing;
     uniform bool enable_film_grain_noise = false;
 //  uniform bool enable_film_grain_noise = false;
     // This property defines the intensity of stylistic overlays, such as the film grain noise.
 //  // This property defines the intensity of stylistic overlays, such as the film grain noise.
     uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.01;
 //  uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.01;
+    // Controls the animation speed of the film grain noise pattern.
+//  // Controls the animation speed of the film grain noise pattern.
+    uniform vec2 film_grain_noise_speed = vec2(0.0, 0.0);
+//  uniform vec2 film_grain_noise_speed = vec2(0.0, 0.0);
+    group_uniforms;
+//  group_uniforms;
 
     const float constant_inverse_pi = 0.31830988618;
 //  const float constant_inverse_pi = 0.31830988618;
@@ -160,16 +195,10 @@
 //  // This function allows developers to inject specific logic for global illumination or stylistic ambient shading.
     vec3 compute_custom_ambient_lighting(vec3 surface_base_color_rgb, vec3 surface_normal, vec3 surface_tangent, vec3 view_direction) {
 //  vec3 compute_custom_ambient_lighting(vec3 surface_base_color_rgb, vec3 surface_normal, vec3 surface_tangent, vec3 view_direction) {
-        // Add your custom ambient lighting logic here to override Godot's default environment lighting.
-//      // Add your custom ambient lighting logic here to override Godot's default environment lighting.
-        // For example, you could implement a fake directional hemispheric light, a stylized constant color, or a custom cubemap sample.
-//      // For example, you could implement a fake directional hemispheric light, a stylized constant color, or a custom cubemap sample.
-        // An example placeholder value.
-//      // An example placeholder value.
-        vec3 ambient_color = vec3(0.05);
-//      vec3 ambient_color = vec3(0.05);
-        return surface_base_color_rgb * ambient_color;
-//      return surface_base_color_rgb * ambient_color;
+        // Override this function to implement custom ambient lighting (e.g., hemispheric light, cubemap sample).
+//      // Override this function to implement custom ambient lighting (e.g., hemispheric light, cubemap sample).
+        return surface_base_color_rgb * custom_ambient_color;
+//      return surface_base_color_rgb * custom_ambient_color;
     }
 //  }
 
@@ -205,10 +234,12 @@
 //  void fragment() {
         // --- Early Alpha Calculation & Discard ---
 //      // --- Early Alpha Calculation & Discard ---
-        // Samples only the alpha channel of the detail texture first to avoid unnecessary memory bandwidth consumption if the fragment is discarded.
-//      // Samples only the alpha channel of the detail texture first to avoid unnecessary memory bandwidth consumption if the fragment is discarded.
-        float sampled_detail_alpha = texture(detail_albedo_texture, scaled_detail_uv).a;
-//      float sampled_detail_alpha = texture(detail_albedo_texture, scaled_detail_uv).a;
+        // Samples the full detail texel once. The alpha is used for early discard; RGB is used later for color.
+//      // Samples the full detail texel once. The alpha is used for early discard; RGB is used later for color.
+        vec4 sampled_detail_texel = texture(detail_albedo_texture, scaled_detail_uv);
+//      vec4 sampled_detail_texel = texture(detail_albedo_texture, scaled_detail_uv);
+        float sampled_detail_alpha = sampled_detail_texel.a;
+//      float sampled_detail_alpha = sampled_detail_texel.a;
 
         // Applies the alpha from the detail texture and the base color to determine the hair's transparency and sorting.
 //      // Applies the alpha from the detail texture and the base color to determine the hair's transparency and sorting.
@@ -246,10 +277,10 @@
 
         // --- Expensive Calculations Follow ---
 //      // --- Expensive Calculations Follow ---
-        // If the fragment was not discarded, the shader proceeds with heavy texture sampling and mathematical operations.
-//      // If the fragment was not discarded, the shader proceeds with heavy texture sampling and mathematical operations.
-        vec3 sampled_detail_color = texture(detail_albedo_texture, scaled_detail_uv).rgb;
-//      vec3 sampled_detail_color = texture(detail_albedo_texture, scaled_detail_uv).rgb;
+        // If the fragment was not discarded, the shader proceeds with heavy mathematical operations.
+//      // If the fragment was not discarded, the shader proceeds with heavy mathematical operations.
+        vec3 sampled_detail_color = sampled_detail_texel.rgb;
+//      vec3 sampled_detail_color = sampled_detail_texel.rgb;
         vec3 calculated_base_color = base_albedo_color.rgb * sampled_detail_color;
 //      vec3 calculated_base_color = base_albedo_color.rgb * sampled_detail_color;
 
@@ -290,8 +321,8 @@
 //          // Calculates the pseudo-random grain noise using the fragment's screen UV coordinates.
             // This generates a high-frequency noise pattern to simulate film grain.
 //          // This generates a high-frequency noise pattern to simulate film grain.
-            float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV);
-//          float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV);
+            float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV + vec2(TIME) * film_grain_noise_speed);
+//          float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV + vec2(TIME) * film_grain_noise_speed);
 
             // Remaps the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scales it by the chosen intensity.
 //          // Remaps the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scales it by the chosen intensity.
@@ -310,8 +341,10 @@
         stored_raw_base_color = calculated_base_color * backlight_transmission_intensity;
 //      stored_raw_base_color = calculated_base_color * backlight_transmission_intensity;
 
-        stored_detail_luminance = dot(calculated_base_color, constant_luminance_weights) * direct_light_albedo_scale * direct_specular_intensity;
-//      stored_detail_luminance = dot(calculated_base_color, constant_luminance_weights) * direct_light_albedo_scale * direct_specular_intensity;
+        // Uses luminance (not full RGB) to avoid double-coloring, since the LUT already encodes sigma_a absorption color.
+//      // Uses luminance (not full RGB) to avoid double-coloring, since the LUT already encodes sigma_a absorption color.
+        stored_detail_luminance = dot(calculated_base_color, constant_luminance_weights) * direct_light_intensity_scale * direct_bsdf_intensity;
+//      stored_detail_luminance = dot(calculated_base_color, constant_luminance_weights) * direct_light_intensity_scale * direct_bsdf_intensity;
 
         // Defines the orientation of the hair strands for anisotropic highlights.
 //      // Defines the orientation of the hair strands for anisotropic highlights.
@@ -470,10 +503,8 @@
         float calculated_angle_phi_difference = acos(clamp(dot_product_projected_light_and_view * inverse_projected_lengths_product, -1.0, 1.0));
 //      float calculated_angle_phi_difference = acos(clamp(dot_product_projected_light_and_view * inverse_projected_lengths_product, -1.0, 1.0));
 
-        // Applies the mask to zero out the result if the initial condition was not met, achieving branchless execution.
-//      // Applies the mask to zero out the result if the initial condition was not met, achieving branchless execution.
-        float angle_phi_difference = calculated_angle_phi_difference * valid_product_mask;
-//      float angle_phi_difference = calculated_angle_phi_difference * valid_product_mask;
+        float angle_phi_difference = calculated_angle_phi_difference;
+//      float angle_phi_difference = calculated_angle_phi_difference;
 
         // Maps the azimuthal difference from the range [0, PI] to the normalized texture coordinate [0.0, 1.0] for the W axis (depth of the 3D texture).
 //      // Maps the azimuthal difference from the range [0, PI] to the normalized texture coordinate [0.0, 1.0] for the W axis (depth of the 3D texture).
@@ -493,8 +524,10 @@
 //      // Step 3: Samples the pre-baked BSDF Look-Up Table.
         // Evaluates the complex hair scattering function by sampling the 3D texture at the calculated (U, V, W) coordinates.
 //      // Evaluates the complex hair scattering function by sampling the 3D texture at the calculated (U, V, W) coordinates.
-        vec3 sampled_brdf_evaluation = texture(hair_bsdf_texture_lut, texture_coordinates_3d).rgb;
-//      vec3 sampled_brdf_evaluation = texture(hair_bsdf_texture_lut, texture_coordinates_3d).rgb;
+        // Applies valid_product_mask to fade out the LUT when azimuthal angle is degenerate (light/view tangent-aligned).
+//      // Applies valid_product_mask to fade out the LUT when azimuthal angle is degenerate (light/view tangent-aligned).
+        vec3 sampled_brdf_evaluation = texture(hair_bsdf_texture_lut, texture_coordinates_3d).rgb * valid_product_mask;
+//      vec3 sampled_brdf_evaluation = texture(hair_bsdf_texture_lut, texture_coordinates_3d).rgb * valid_product_mask;
 
         // Step 4: Computes the final output lighting.
 //      // Step 4: Computes the final output lighting.
