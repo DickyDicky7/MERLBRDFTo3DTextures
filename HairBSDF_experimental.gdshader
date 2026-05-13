@@ -1,7 +1,7 @@
     shader_type spatial;
 //  shader_type spatial;
-    render_mode blend_mix, depth_draw_opaque, cull_disabled, specular_disabled, depth_prepass_alpha;
-//  render_mode blend_mix, depth_draw_opaque, cull_disabled, specular_disabled, depth_prepass_alpha;
+    render_mode blend_mix, depth_draw_opaque, depth_prepass_alpha, cull_disabled, specular_disabled;
+//  render_mode blend_mix, depth_draw_opaque, depth_prepass_alpha, cull_disabled, specular_disabled;
 
     // A 3D texture containing the baked PBRT hair Bidirectional Scattering Distribution Function (BSDF).
 //  // A 3D texture containing the baked PBRT hair Bidirectional Scattering Distribution Function (BSDF).
