@@ -41,6 +41,10 @@
 
     // --- Glass Material Core Properties ---
 //  // --- Glass Material Core Properties ---
+    // These properties define the foundational physical characteristics of the glass surface.
+//  // These properties define the foundational physical characteristics of the glass surface.
+    group_uniforms core_properties;
+//  group_uniforms core_properties;
     // The foundational transmission color or tint of the glass material before volumetric absorption is applied.
 //  // The foundational transmission color or tint of the glass material before volumetric absorption is applied.
     uniform vec3 glass_base_color : source_color = vec3(1.0, 1.0, 1.0);
@@ -58,7 +62,15 @@
 //  // Controls the simulated geometric depth of the glass object for volumetric light absorption calculations.
     uniform float glass_thickness : hint_range(0.0, 10.0) = 1.0;
 //  uniform float glass_thickness : hint_range(0.0, 10.0) = 1.0;
+    group_uniforms;
+//  group_uniforms;
 
+    // --- Optical Effects ---
+//  // --- Optical Effects ---
+    // These properties control optional visual enhancements that simulate physical light dispersion and energy recovery.
+//  // These properties control optional visual enhancements that simulate physical light dispersion and energy recovery.
+    group_uniforms effects;
+//  group_uniforms effects;
     // Controls the intensity of the chromatic aberration effect, simulating wavelength-dependent light dispersion.
 //  // Controls the intensity of the chromatic aberration effect, simulating wavelength-dependent light dispersion.
     uniform float chromatic_aberration_intensity : hint_range(0.0, 1.0) = 0.05;
@@ -68,6 +80,8 @@
 //  // A multiplier for the intensity of the recovered multiple scattering energy, allowing artistic adjustments.
     uniform float energy_compensation_multiplier : hint_range(0.0, 5.0) = 1.0;
 //  uniform float energy_compensation_multiplier : hint_range(0.0, 5.0) = 1.0;
+    group_uniforms;
+//  group_uniforms;
 
     void vertex() {
 //  void vertex() {
@@ -82,15 +96,15 @@
 //  void fragment() {
         // 1. Core Vectors and Viewing Angle Calculation
 //      // 1. Core Vectors and Viewing Angle Calculation
-        // Normalize the core vectors required for sampling look-up tables and refraction calculations.
-//      // Normalize the core vectors required for sampling look-up tables and refraction calculations.
+        // Normalizes the core vectors required for sampling look-up tables and refraction calculations.
+//      // Normalizes the core vectors required for sampling look-up tables and refraction calculations.
         vec3 normalized_surface_normal_vector = normalize(NORMAL);
 //      vec3 normalized_surface_normal_vector = normalize(NORMAL);
         vec3 normalized_outgoing_view_direction = normalize(VIEW);
 //      vec3 normalized_outgoing_view_direction = normalize(VIEW);
 
-        // Flip the surface normal for interior backfaces to ensure correct refraction direction and LUT sampling.
-//      // Flip the surface normal for interior backfaces to ensure correct refraction direction and LUT sampling.
+        // Flips the surface normal for interior backfaces to ensure correct refraction direction and LUT sampling.
+//      // Flips the surface normal for interior backfaces to ensure correct refraction direction and LUT sampling.
         // When cull_disabled is active, backface normals point away from the camera, producing negative NdotV values
 //      // When cull_disabled is active, backface normals point away from the camera, producing negative NdotV values
         // that would collapse all LUT samples to the edge-on boundary if left uncorrected.
@@ -102,17 +116,17 @@
         }
 //      }
 
-        // Calculate the cosine of the angle between the surface normal and the view direction, ensuring it is non-negative.
-//      // Calculate the cosine of the angle between the surface normal and the view direction, ensuring it is non-negative.
+        // Calculates the cosine of the angle between the surface normal and the view direction, ensuring it is non-negative.
+//      // Calculates the cosine of the angle between the surface normal and the view direction, ensuring it is non-negative.
         float dot_product_normal_and_view_direction = max(0.0, dot(normalized_surface_normal_vector, normalized_outgoing_view_direction));
 //      float dot_product_normal_and_view_direction = max(0.0, dot(normalized_surface_normal_vector, normalized_outgoing_view_direction));
 
         // 2. Sample Pre-calculated Look-Up Tables
 //      // 2. Sample Pre-calculated Look-Up Tables
-        // Construct the 2D UV coordinates based on the viewing angle and the surface roughness parameter.
-//      // Construct the 2D UV coordinates based on the viewing angle and the surface roughness parameter.
-        // Apply a half-texel offset and scale correction to ensure proper texel-center sampling at LUT boundaries.
-//      // Apply a half-texel offset and scale correction to ensure proper texel-center sampling at LUT boundaries.
+        // Constructs the 2D UV coordinates based on the viewing angle and the surface roughness parameter.
+//      // Constructs the 2D UV coordinates based on the viewing angle and the surface roughness parameter.
+        // Applies a half-texel offset and scale correction to ensure proper texel-center sampling at LUT boundaries.
+//      // Applies a half-texel offset and scale correction to ensure proper texel-center sampling at LUT boundaries.
         // For 128-texel LUTs: scale = 127.0 / 128.0 = 0.9921875, offset = 0.5 / 128.0 = 0.00390625.
 //      // For 128-texel LUTs: scale = 127.0 / 128.0 = 0.9921875, offset = 0.5 / 128.0 = 0.00390625.
         const float constant_glass_2d_lut_half_texel_scale = 0.9921875;
@@ -147,8 +161,8 @@
 
         // 3. Compute Refraction Direction Vector via Snell's Law
 //      // 3. Compute Refraction Direction Vector via Snell's Law
-        // Calculate the relative index of refraction based on the surface orientation.
-//      // Calculate the relative index of refraction based on the surface orientation.
+        // Calculates the relative index of refraction based on the surface orientation.
+//      // Calculates the relative index of refraction based on the surface orientation.
         // For front faces, light transitions from air (IOR 1.0) into the glass medium: eta = 1.0 / IOR.
 //      // For front faces, light transitions from air (IOR 1.0) into the glass medium: eta = 1.0 / IOR.
         // For back faces, light transitions from the glass medium back into air: eta = IOR / 1.0.
@@ -190,8 +204,8 @@
 //      vec3 calculated_final_transmission_color = vec3(0.0);
         if (!is_total_internal_reflection) {
 //      if (!is_total_internal_reflection) {
-            // Project the computed 3D refraction direction into 2D screen UV space.
-//          // Project the computed 3D refraction direction into 2D screen UV space.
+            // Projects the computed 3D refraction direction into 2D screen UV space.
+//          // Projects the computed 3D refraction direction into 2D screen UV space.
             // This offset is linearly approximated based on the simulated object thickness to distort the background realistically.
 //          // This offset is linearly approximated based on the simulated object thickness to distort the background realistically.
             vec2 calculated_screen_space_refraction_uv_offset = calculated_refraction_direction_vector.xy * (glass_thickness * 0.05);
@@ -241,8 +255,8 @@
 
             // 6. Combine Core Transmission with Base Material Color and Look-Up Tables
 //          // 6. Combine Core Transmission with Base Material Color and Look-Up Tables
-            // Apply the Fresnel-correct split-sum transmission decomposition to the refracted background light.
-//          // Apply the Fresnel-correct split-sum transmission decomposition to the refracted background light.
+            // Applies the Fresnel-correct split-sum transmission decomposition to the refracted background light.
+//          // Applies the Fresnel-correct split-sum transmission decomposition to the refracted background light.
             // The Schlick approximation factors the transmission integral as T = (1 - F0) * (Et - E_split_sum),
 //          // The Schlick approximation factors the transmission integral as T = (1 - F0) * (Et - E_split_sum),
             // where Et is the total pre-integrated transmission energy (LUT red channel) and
@@ -309,10 +323,10 @@
         ALBEDO = vec3(0.0);
 //      ALBEDO = vec3(0.0);
 
-        // Inject our customly constructed refracted transmission light profile directly into the EMISSION output parameter.
-//      // Inject our customly constructed refracted transmission light profile directly into the EMISSION output parameter.
-        // This forces the transmitted light to behave structurally as an unlit surface component within the rendering engine's forward pass.
-//      // This forces the transmitted light to behave structurally as an unlit surface component within the rendering engine's forward pass.
+        // Injects the custom-constructed refracted transmission light profile directly into the EMISSION output parameter.
+//      // Injects the custom-constructed refracted transmission light profile directly into the EMISSION output parameter.
+        // This forces the transmitted light to behave as an unlit surface component within the rendering engine's forward pass.
+//      // This forces the transmitted light to behave as an unlit surface component within the rendering engine's forward pass.
         EMISSION = calculated_final_transmission_color + calculated_reflected_energy_compensation_color;
 //      EMISSION = calculated_final_transmission_color + calculated_reflected_energy_compensation_color;
 
@@ -336,8 +350,8 @@
 //  void light() {
         // Because realistic glass is a dielectric medium that exclusively reflects or transmits incoming light rays,
 //      // Because realistic glass is a dielectric medium that exclusively reflects or transmits incoming light rays,
-        // we explicitly disable the Godot engine's default diffuse lambertian scattering evaluation entirely.
-//      // we explicitly disable the Godot engine's default diffuse lambertian scattering evaluation entirely.
+        // we explicitly disable the Godot engine's default diffuse Lambertian scattering evaluation entirely.
+//      // we explicitly disable the Godot engine's default diffuse Lambertian scattering evaluation entirely.
         // This crucial step is required to maintain physically accurate volumetric glass visual characteristics.
 //      // This crucial step is required to maintain physically accurate volumetric glass visual characteristics.
         DIFFUSE_LIGHT = vec3(0.0);
