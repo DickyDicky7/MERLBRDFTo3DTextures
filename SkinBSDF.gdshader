@@ -12,80 +12,110 @@
     uniform sampler2D pre_integrated_skin_scattering_lut_texture : hint_default_black, filter_linear, repeat_disable;
 //  uniform sampler2D pre_integrated_skin_scattering_lut_texture : hint_default_black, filter_linear, repeat_disable;
 
-    // Basic Skin Material Properties defining the foundational surface color and detail variations.
-//  // Basic Skin Material Properties defining the foundational surface color and detail variations.
+    // --- Basic Skin Material Properties ---
+//  // --- Basic Skin Material Properties ---
+    // These properties define the foundational surface color and detail variations of the skin material.
+//  // These properties define the foundational surface color and detail variations of the skin material.
+    group_uniforms base_color;
+//  group_uniforms base_color;
     uniform vec3 skin_base_albedo_color : source_color = vec3(1.0, 1.0, 1.0);
 //  uniform vec3 skin_base_albedo_color : source_color = vec3(1.0, 1.0, 1.0);
-    // Detail texture to add pores, freckles, and other skin imperfections to the base color.
-//  // Detail texture to add pores, freckles, and other skin imperfections to the base color.
+    // A detail texture that adds pores, freckles, and other skin imperfections to the base color.
+//  // A detail texture that adds pores, freckles, and other skin imperfections to the base color.
     uniform sampler2D skin_detail_albedo_texture : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
 //  uniform sampler2D skin_detail_albedo_texture : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
-    // Scale factor to tile the detail texture across the mesh surface.
-//  // Scale factor to tile the detail texture across the mesh surface.
+    // The scale factor used to tile the detail texture across the mesh surface.
+//  // The scale factor used to tile the detail texture across the mesh surface.
     uniform vec2 skin_detail_texture_uv_coordinate_scale = vec2(1.0, 1.0);
 //  uniform vec2 skin_detail_texture_uv_coordinate_scale = vec2(1.0, 1.0);
+    group_uniforms;
+//  group_uniforms;
 
-    // Normal map texture to add micro-surface details without adding geometry.
-//  // Normal map texture to add micro-surface details without adding geometry.
+    // --- Micro-Surface Normal Properties ---
+//  // --- Micro-Surface Normal Properties ---
+    // A normal map texture that adds micro-surface detail without requiring additional geometry.
+//  // A normal map texture that adds micro-surface detail without requiring additional geometry.
+    group_uniforms normal_map;
+//  group_uniforms normal_map;
     uniform sampler2D skin_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
 //  uniform sampler2D skin_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
-    // Scale factor to tile the normal map texture across the mesh surface.
-//  // Scale factor to tile the normal map texture across the mesh surface.
+    // The scale factor used to tile the normal map texture across the mesh surface.
+//  // The scale factor used to tile the normal map texture across the mesh surface.
     uniform vec2 skin_normal_map_texture_uv_coordinate_scale = vec2(1.0, 1.0);
 //  uniform vec2 skin_normal_map_texture_uv_coordinate_scale = vec2(1.0, 1.0);
-    // Overall strength of the normal map effect.
-//  // Overall strength of the normal map effect.
+    // The overall strength of the normal map effect.
+//  // The overall strength of the normal map effect.
     uniform float skin_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
 //  uniform float skin_normal_map_intensity : hint_range(0.0, 5.0) = 1.0;
+    group_uniforms;
+//  group_uniforms;
 
-    // Skin Specular Properties controlling the shiny reflection layer (using the GGX microfacet model).
-//  // Skin Specular Properties controlling the shiny reflection layer (using the GGX microfacet model).
-    // Overall strength of the specular reflection on the skin surface.
-//  // Overall strength of the specular reflection on the skin surface.
+    // --- Specular Reflection Properties ---
+//  // --- Specular Reflection Properties ---
+    // These properties control the specular reflection layer using the GGX microfacet model.
+//  // These properties control the specular reflection layer using the GGX microfacet model.
+    group_uniforms specular;
+//  group_uniforms specular;
+    // The overall strength of the specular reflection on the skin surface.
+//  // The overall strength of the specular reflection on the skin surface.
     uniform float skin_direct_specular_intensity : hint_range(0.0, 5.0) = 0.5;
 //  uniform float skin_direct_specular_intensity : hint_range(0.0, 5.0) = 0.5;
-    // Perceived microscopic roughness of the skin, blurring specular highlights.
-//  // Perceived microscopic roughness of the skin, blurring specular highlights.
+    // The perceived microscopic roughness of the skin surface, which blurs specular highlights.
+//  // The perceived microscopic roughness of the skin surface, which blurs specular highlights.
     uniform float skin_surface_microfacet_roughness : hint_range(0.0, 1.0) = 0.4;
 //  uniform float skin_surface_microfacet_roughness : hint_range(0.0, 1.0) = 0.4;
+    group_uniforms;
+//  group_uniforms;
 
     // --- Surface Moisture Properties ---
 //  // --- Surface Moisture Properties ---
-    // Toggles the calculation of surface moisture mechanics.
-//  // Toggles the calculation of surface moisture mechanics.
+    // These properties control the simulation of surface moisture such as sweat, oil, or water on the skin.
+//  // These properties control the simulation of surface moisture such as sweat, oil, or water on the skin.
+    group_uniforms surface_moisture;
+//  group_uniforms surface_moisture;
+    // Toggles the surface moisture simulation for sweat, oil, or water on the skin.
+//  // Toggles the surface moisture simulation for sweat, oil, or water on the skin.
     uniform bool enable_skin_surface_moisture = false;
 //  uniform bool enable_skin_surface_moisture = false;
-    // Controls the appearance of sweat, oil, or water on the skin surface.
-//  // Controls the appearance of sweat, oil, or water on the skin surface.
+    // Controls the overall intensity of the surface moisture effect.
+//  // Controls the overall intensity of the surface moisture effect.
     uniform float skin_surface_moisture_intensity : hint_range(0.0, 1.0) = 0.0;
 //  uniform float skin_surface_moisture_intensity : hint_range(0.0, 1.0) = 0.0;
-    // How smooth the wet areas are.
-//  // How smooth the wet areas are.
+    // Controls the perceived microscopic roughness of moisture-affected skin areas.
+//  // Controls the perceived microscopic roughness of moisture-affected skin areas.
     uniform float skin_surface_moisture_roughness : hint_range(0.0, 1.0) = 0.15;
 //  uniform float skin_surface_moisture_roughness : hint_range(0.0, 1.0) = 0.15;
-    // Boosts reflection in wet areas.
-//  // Boosts reflection in wet areas.
+    // Multiplies the specular reflection intensity in moisture-affected areas to simulate a wet, glossy appearance.
+//  // Multiplies the specular reflection intensity in moisture-affected areas to simulate a wet, glossy appearance.
     uniform float skin_surface_moisture_specular_multiplier : hint_range(1.0, 3.0) = 1.5;
 //  uniform float skin_surface_moisture_specular_multiplier : hint_range(1.0, 3.0) = 1.5;
-    // How much darker wet skin gets.
-//  // How much darker wet skin gets.
+    // Controls the amount of albedo darkening applied to moisture-affected skin, simulating light absorption by surface water.
+//  // Controls the amount of albedo darkening applied to moisture-affected skin, simulating light absorption by surface water.
     uniform float skin_surface_moisture_albedo_darkening : hint_range(0.0, 1.0) = 0.2;
 //  uniform float skin_surface_moisture_albedo_darkening : hint_range(0.0, 1.0) = 0.2;
-    // Optional mask for sweat patches.
-//  // Optional mask for sweat patches.
+    // An optional mask texture that spatially defines moisture-affected areas such as sweat patches.
+//  // An optional mask texture that spatially defines moisture-affected areas such as sweat patches.
     uniform sampler2D skin_surface_moisture_mask_texture : hint_default_white, filter_linear_mipmap;
 //  uniform sampler2D skin_surface_moisture_mask_texture : hint_default_white, filter_linear_mipmap;
+    group_uniforms;
+//  group_uniforms;
 
-    // Subsurface Scattering scale parameters controlling how light bleeds through the geometry.
-//  // Subsurface Scattering scale parameters controlling how light bleeds through the geometry.
+    // --- Subsurface Scattering Properties ---
+//  // --- Subsurface Scattering Properties ---
+    // These properties control the subsurface scattering effect, which simulates how light bleeds through thin geometry.
+//  // These properties control the subsurface scattering effect, which simulates how light bleeds through thin geometry.
+    group_uniforms subsurface_scattering;
+//  group_uniforms subsurface_scattering;
     // Controls the overall size and spread of the subsurface scattering effect relative to the physical model scale.
 //  // Controls the overall size and spread of the subsurface scattering effect relative to the physical model scale.
     uniform float subsurface_scattering_radius_scale : hint_range(0.0, 10.0) = 1.0;
 //  uniform float subsurface_scattering_radius_scale : hint_range(0.0, 10.0) = 1.0;
-    // Maximum expected curvature on the mesh. This value must exactly match the max_curvature used during the bake_skin.py generation process to map the LUT correctly.
-//  // Maximum expected curvature on the mesh. This value must exactly match the max_curvature used during the bake_skin.py generation process to map the LUT correctly.
+    // The maximum expected curvature of the mesh. This value must exactly match the max_curvature used during the bake_skin.py generation process to map the LUT correctly.
+//  // The maximum expected curvature of the mesh. This value must exactly match the max_curvature used during the bake_skin.py generation process to map the LUT correctly.
     uniform float maximum_estimated_surface_curvature : hint_range(0.1, 10.0) = 1.0;
 //  uniform float maximum_estimated_surface_curvature : hint_range(0.1, 10.0) = 1.0;
+    group_uniforms;
+//  group_uniforms;
 
     // Precomputed constants for the half-texel correction specific to the 512x512 LUT dimensions.
 //  // Precomputed constants for the half-texel correction specific to the 512x512 LUT dimensions.
@@ -116,19 +146,19 @@
 
     void fragment() {
 //  void fragment() {
-        // Sample the detail texture using the scaled UV coordinates.
-//      // Sample the detail texture using the scaled UV coordinates.
+        // Samples the detail texture using the scaled UV coordinates.
+//      // Samples the detail texture using the scaled UV coordinates.
         vec4 sampled_skin_detail_texture_color = texture(skin_detail_albedo_texture, UV * skin_detail_texture_uv_coordinate_scale);
 //      vec4 sampled_skin_detail_texture_color = texture(skin_detail_albedo_texture, UV * skin_detail_texture_uv_coordinate_scale);
-        // Multiply the uniform base color by the sampled detail texture to get the final albedo base color.
-//      // Multiply the uniform base color by the sampled detail texture to get the final albedo base color.
+        // Multiplies the uniform base color by the sampled detail texture to produce the final skin albedo base color.
+//      // Multiplies the uniform base color by the sampled detail texture to produce the final skin albedo base color.
         vec3 calculated_final_skin_base_color = skin_base_albedo_color * sampled_skin_detail_texture_color.rgb;
 //      vec3 calculated_final_skin_base_color = skin_base_albedo_color * sampled_skin_detail_texture_color.rgb;
 
         // --- Moisture Calculation ---
 //      // --- Moisture Calculation ---
-        // Default surface properties.
-//      // Default surface properties.
+        // Initializes the surface properties with their default dry-skin values before moisture adjustments.
+//      // Initializes the surface properties with their default dry-skin values before moisture adjustments.
         float applied_skin_surface_microfacet_roughness = skin_surface_microfacet_roughness;
 //      float applied_skin_surface_microfacet_roughness = skin_surface_microfacet_roughness;
         float applied_skin_direct_specular_intensity = skin_direct_specular_intensity;
@@ -136,23 +166,23 @@
 
         if (enable_skin_surface_moisture) {
 //      if (enable_skin_surface_moisture) {
-            // Sample the moisture mask to determine wet areas.
-//          // Sample the moisture mask to determine wet areas.
+            // Samples the moisture mask texture to determine the spatial extent of wet areas.
+//          // Samples the moisture mask texture to determine the spatial extent of wet areas.
             float sampled_skin_surface_moisture_mask = texture(skin_surface_moisture_mask_texture, UV).r * skin_surface_moisture_intensity;
 //          float sampled_skin_surface_moisture_mask = texture(skin_surface_moisture_mask_texture, UV).r * skin_surface_moisture_intensity;
 
-            // Darken Albedo based on moisture.
-//          // Darken Albedo based on moisture.
+            // Darkens the albedo color based on the moisture mask to simulate light absorption by surface water.
+//          // Darkens the albedo color based on the moisture mask to simulate light absorption by surface water.
             calculated_final_skin_base_color = mix(calculated_final_skin_base_color, calculated_final_skin_base_color * (1.0 - skin_surface_moisture_albedo_darkening), sampled_skin_surface_moisture_mask);
 //          calculated_final_skin_base_color = mix(calculated_final_skin_base_color, calculated_final_skin_base_color * (1.0 - skin_surface_moisture_albedo_darkening), sampled_skin_surface_moisture_mask);
 
-            // Adjust Roughness: Interpolate between base roughness and wet roughness.
-//          // Adjust Roughness: Interpolate between base roughness and wet roughness.
+            // Interpolates between the base roughness and the moisture roughness based on the moisture mask.
+//          // Interpolates between the base roughness and the moisture roughness based on the moisture mask.
             applied_skin_surface_microfacet_roughness = mix(skin_surface_microfacet_roughness, skin_surface_moisture_roughness, sampled_skin_surface_moisture_mask);
 //          applied_skin_surface_microfacet_roughness = mix(skin_surface_microfacet_roughness, skin_surface_moisture_roughness, sampled_skin_surface_moisture_mask);
 
-            // Adjust Specular: Boost specularity in wet areas.
-//          // Adjust Specular: Boost specularity in wet areas.
+            // Boosts the specular intensity in wet areas by interpolating toward the moisture-adjusted specular multiplier.
+//          // Boosts the specular intensity in wet areas by interpolating toward the moisture-adjusted specular multiplier.
             applied_skin_direct_specular_intensity = mix(skin_direct_specular_intensity, skin_direct_specular_intensity * skin_surface_moisture_specular_multiplier, sampled_skin_surface_moisture_mask);
 //          applied_skin_direct_specular_intensity = mix(skin_direct_specular_intensity, skin_direct_specular_intensity * skin_surface_moisture_specular_multiplier, sampled_skin_surface_moisture_mask);
         }
@@ -195,31 +225,31 @@
         ALBEDO = calculated_final_skin_base_color;
 //      ALBEDO = calculated_final_skin_base_color;
 
-        // Apply calculated roughness.
-//      // Apply calculated roughness.
+        // Applies the calculated roughness, which may be adjusted by the surface moisture simulation.
+//      // Applies the calculated roughness, which may be adjusted by the surface moisture simulation.
         ROUGHNESS = applied_skin_surface_microfacet_roughness;
 //      ROUGHNESS = applied_skin_surface_microfacet_roughness;
 
         METALLIC = 0.0; // Skin is a dielectric material, so metallic is strictly 0.0.
 //      METALLIC = 0.0; // Skin is a dielectric material, so metallic is strictly 0.0.
 
-        // Apply calculated specular.
-//      // Apply calculated specular.
+        // Applies the calculated specular intensity, which may be boosted by the surface moisture simulation.
+//      // Applies the calculated specular intensity, which may be boosted by the surface moisture simulation.
         SPECULAR = applied_skin_direct_specular_intensity;
 //      SPECULAR = applied_skin_direct_specular_intensity;
 
-        // Sample the normal map texture using the scaled UV coordinates.
-//      // Sample the normal map texture using the scaled UV coordinates.
+        // Samples the normal map texture using the scaled UV coordinates.
+//      // Samples the normal map texture using the scaled UV coordinates.
         vec3 sampled_skin_normal_map_color = texture(skin_normal_map_texture, UV * skin_normal_map_texture_uv_coordinate_scale).rgb;
 //      vec3 sampled_skin_normal_map_color = texture(skin_normal_map_texture, UV * skin_normal_map_texture_uv_coordinate_scale).rgb;
 
-        // Apply the normal map to the built-in PBR normal map property.
-//      // Apply the normal map to the built-in PBR normal map property.
+        // Applies the sampled normal map to the built-in PBR normal map property.
+//      // Applies the sampled normal map to the built-in PBR normal map property.
         NORMAL_MAP = sampled_skin_normal_map_color;
 //      NORMAL_MAP = sampled_skin_normal_map_color;
 
-        // Scale the intensity of the normal map effect.
-//      // Scale the intensity of the normal map effect.
+        // Scales the overall intensity of the normal map effect.
+//      // Scales the overall intensity of the normal map effect.
         NORMAL_MAP_DEPTH = skin_normal_map_intensity;
 //      NORMAL_MAP_DEPTH = skin_normal_map_intensity;
     }
