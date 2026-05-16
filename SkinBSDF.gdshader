@@ -87,12 +87,23 @@
     uniform float maximum_estimated_surface_curvature : hint_range(0.1, 10.0) = 1.0;
 //  uniform float maximum_estimated_surface_curvature : hint_range(0.1, 10.0) = 1.0;
 
+    // Precomputed constants for the half-texel correction specific to the 512x512 LUT dimensions.
+//  // Precomputed constants for the half-texel correction specific to the 512x512 LUT dimensions.
+    // These constants prevent sampling artifacts and interpolation errors near the edges of the 2D texture.
+//  // These constants prevent sampling artifacts and interpolation errors near the edges of the 2D texture.
+    const float constant_skin_lut_half_texel_scale = 0.998046875;
+//  const float constant_skin_lut_half_texel_scale = 0.998046875;
+    const float constant_skin_lut_half_texel_offset = 0.0009765625;
+//  const float constant_skin_lut_half_texel_offset = 0.0009765625;
+
     // Varyings to pass calculated data from the fragment function to the custom light function.
 //  // Varyings to pass calculated data from the fragment function to the custom light function.
     varying vec3 fragment_stored_raw_base_color;
 //  varying vec3 fragment_stored_raw_base_color;
     varying float fragment_estimated_surface_curvature;
 //  varying float fragment_estimated_surface_curvature;
+    varying float fragment_stored_applied_specular_intensity;
+//  varying float fragment_stored_applied_specular_intensity;
 
     void vertex() {
 //  void vertex() {
@@ -153,6 +164,13 @@
 //      // This optimization avoids redundant texture sampling during the per-pixel/per-light evaluation in the light() pass.
         fragment_stored_raw_base_color = calculated_final_skin_base_color;
 //      fragment_stored_raw_base_color = calculated_final_skin_base_color;
+
+        // Pass the moisture-adjusted specular intensity to the light function via a varying variable.
+//      // Pass the moisture-adjusted specular intensity to the light function via a varying variable.
+        // This ensures the custom GGX specular calculation in light() respects the surface moisture adjustment from fragment().
+//      // This ensures the custom GGX specular calculation in light() respects the surface moisture adjustment from fragment().
+        fragment_stored_applied_specular_intensity = applied_skin_direct_specular_intensity;
+//      fragment_stored_applied_specular_intensity = applied_skin_direct_specular_intensity;
 
         // Estimate local geometric curvature dynamically using screen-space partial derivatives.
 //      // Estimate local geometric curvature dynamically using screen-space partial derivatives.
@@ -244,6 +262,15 @@
         float lut_texture_coordinate_v_from_curvature = clamp((fragment_estimated_surface_curvature * subsurface_scattering_radius_scale) / maximum_estimated_surface_curvature, 0.0, 1.0);
 //      float lut_texture_coordinate_v_from_curvature = clamp((fragment_estimated_surface_curvature * subsurface_scattering_radius_scale) / maximum_estimated_surface_curvature, 0.0, 1.0);
 
+        // Apply a half-texel offset and scale correction to ensure proper texel-center sampling at LUT boundaries.
+//      // Apply a half-texel offset and scale correction to ensure proper texel-center sampling at LUT boundaries.
+        // For 512-texel dimensions: scale = 511.0 / 512.0 = 0.998046875, offset = 0.5 / 512.0 = 0.0009765625.
+//      // For 512-texel dimensions: scale = 511.0 / 512.0 = 0.998046875, offset = 0.5 / 512.0 = 0.0009765625.
+        lut_texture_coordinate_u_from_n_dot_l = lut_texture_coordinate_u_from_n_dot_l * constant_skin_lut_half_texel_scale + constant_skin_lut_half_texel_offset;
+//      lut_texture_coordinate_u_from_n_dot_l = lut_texture_coordinate_u_from_n_dot_l * constant_skin_lut_half_texel_scale + constant_skin_lut_half_texel_offset;
+        lut_texture_coordinate_v_from_curvature = lut_texture_coordinate_v_from_curvature * constant_skin_lut_half_texel_scale + constant_skin_lut_half_texel_offset;
+//      lut_texture_coordinate_v_from_curvature = lut_texture_coordinate_v_from_curvature * constant_skin_lut_half_texel_scale + constant_skin_lut_half_texel_offset;
+
         // Sample the Pre-Integrated Skin LUT using the calculated U (N.L) and V (Curvature) coordinates.
 //      // Sample the Pre-Integrated Skin LUT using the calculated U (N.L) and V (Curvature) coordinates.
         // This yields the blurred, scattered diffuse light profile for human skin.
@@ -284,8 +311,8 @@
 //      // 1. Normal Distribution Function (D) - Trowbridge-Reitz GGX
         // This function determines the statistical distribution of microfacet normals aligned with the half-vector.
 //      // This function determines the statistical distribution of microfacet normals aligned with the half-vector.
-        float microfacet_roughness_alpha = skin_surface_microfacet_roughness * skin_surface_microfacet_roughness;
-//      float microfacet_roughness_alpha = skin_surface_microfacet_roughness * skin_surface_microfacet_roughness;
+        float microfacet_roughness_alpha = ROUGHNESS * ROUGHNESS;
+//      float microfacet_roughness_alpha = ROUGHNESS * ROUGHNESS;
         float microfacet_roughness_alpha_squared = microfacet_roughness_alpha * microfacet_roughness_alpha;
 //      float microfacet_roughness_alpha_squared = microfacet_roughness_alpha * microfacet_roughness_alpha;
         float ggx_distribution_denominator = dot_product_normal_and_half_vector * dot_product_normal_and_half_vector * (microfacet_roughness_alpha_squared - 1.0) + 1.0;
@@ -308,8 +335,8 @@
 //      // 3. Geometry Function (G) - Smith's method with Schlick-GGX approximation
         // This function accounts for self-shadowing and self-masking of the microfacets, preventing them from reflecting too much light.
 //      // This function accounts for self-shadowing and self-masking of the microfacets, preventing them from reflecting too much light.
-        float schlick_smith_geometry_roughness_factor_k = (skin_surface_microfacet_roughness + 1.0);
-//      float schlick_smith_geometry_roughness_factor_k = (skin_surface_microfacet_roughness + 1.0);
+        float schlick_smith_geometry_roughness_factor_k = (ROUGHNESS + 1.0);
+//      float schlick_smith_geometry_roughness_factor_k = (ROUGHNESS + 1.0);
         schlick_smith_geometry_roughness_factor_k = (schlick_smith_geometry_roughness_factor_k * schlick_smith_geometry_roughness_factor_k) / 8.0;
 //      schlick_smith_geometry_roughness_factor_k = (schlick_smith_geometry_roughness_factor_k * schlick_smith_geometry_roughness_factor_k) / 8.0;
 
@@ -331,8 +358,8 @@
 //      // Apply specular intensity scaling and completely mask out specular highlights on surfaces facing away from the light.
         // The sign(ndotl) evaluates to -1 on backfaces, which max(0.0, ...) clips to 0, ensuring shadows don't incorrectly generate specular reflections.
 //      // The sign(ndotl) evaluates to -1 on backfaces, which max(0.0, ...) clips to 0, ensuring shadows don't incorrectly generate specular reflections.
-        float shadow_masked_specular_intensity = max(0.0, sign(dot_product_normal_and_light_direction)) * skin_direct_specular_intensity;
-//      float shadow_masked_specular_intensity = max(0.0, sign(dot_product_normal_and_light_direction)) * skin_direct_specular_intensity;
+        float shadow_masked_specular_intensity = max(0.0, sign(dot_product_normal_and_light_direction)) * fragment_stored_applied_specular_intensity;
+//      float shadow_masked_specular_intensity = max(0.0, sign(dot_product_normal_and_light_direction)) * fragment_stored_applied_specular_intensity;
 
         // Integrate the final specular reflection into the SPECULAR_LIGHT output.
 //      // Integrate the final specular reflection into the SPECULAR_LIGHT output.
