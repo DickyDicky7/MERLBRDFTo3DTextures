@@ -67,15 +67,25 @@ def GGX_D(m_z: float, alpha: float) -> float:
     return alpha2 / (math.pi * denom * denom)
 #   return alpha2 / (math.pi * denom * denom)
 
-def GGX_G1(v_z: float, alpha: float) -> float:
-    if v_z <= 0.0:
-#   if v_z <= 0.0:
+# Height-correlated Smith G2 masking-shadowing function matching pbrt-v3's
+# Height-correlated Smith G2 masking-shadowing function matching pbrt-v3's
+# MicrofacetDistribution::G (microfacet.h:58-60): G = 1 / (1 + Lambda(wo) + Lambda(wi)).
+# MicrofacetDistribution::G (microfacet.h:58-60): G = 1 / (1 + Lambda(wo) + Lambda(wi)).
+# The separable form G1(wo)*G1(wi) underestimates masking at high roughness.
+# The separable form G1(wo)*G1(wi) underestimates masking at high roughness.
+def GGX_G_correlated(v_z: float, l_z: float, alpha: float) -> float:
+    if v_z <= 0.0 or l_z <= 0.0:
+#   if v_z <= 0.0 or l_z <= 0.0:
         return 0.0
 #       return 0.0
     alpha2: float = alpha * alpha
 #   alpha2: float = alpha * alpha
-    return 2.0 * v_z / (v_z + math.sqrt(alpha2 + (1.0 - alpha2) * v_z * v_z))
-#   return 2.0 * v_z / (v_z + math.sqrt(alpha2 + (1.0 - alpha2) * v_z * v_z))
+    lambda_v: float = (-1.0 + math.sqrt(1.0 + alpha2 * (1.0 - v_z * v_z) / (v_z * v_z))) / 2.0
+#   lambda_v: float = (-1.0 + math.sqrt(1.0 + alpha2 * (1.0 - v_z * v_z) / (v_z * v_z))) / 2.0
+    lambda_l: float = (-1.0 + math.sqrt(1.0 + alpha2 * (1.0 - l_z * l_z) / (l_z * l_z))) / 2.0
+#   lambda_l: float = (-1.0 + math.sqrt(1.0 + alpha2 * (1.0 - l_z * l_z) / (l_z * l_z))) / 2.0
+    return 1.0 / (1.0 + lambda_v + lambda_l)
+#   return 1.0 / (1.0 + lambda_v + lambda_l)
 
 def SampleGGX(u1: float, u2: float, alpha: float) -> Tuple[float, float, float]:
     theta: float = math.atan(alpha * math.sqrt(u1) / math.sqrt(1.0 - u1))
@@ -106,10 +116,12 @@ def integrate_energy_and_transmission(ndotv: float, alpha: float, eta: float, nu
 
     sum_Er: float = 0.0
 #   sum_Er: float = 0.0
-    sum_Et: float = 0.0
-#   sum_Et: float = 0.0
-    sum_E_split_sum: float = 0.0
-#   sum_E_split_sum: float = 0.0
+    sum_Et_with_fresnel: float = 0.0
+#   sum_Et_with_fresnel: float = 0.0
+    sum_Et_no_fresnel: float = 0.0
+#   sum_Et_no_fresnel: float = 0.0
+    sum_E_split_sum_no_fresnel: float = 0.0
+#   sum_E_split_sum_no_fresnel: float = 0.0
 
     # For importance sampling, we sample m from the GGX distribution
 #   # For importance sampling, we sample m from the GGX distribution
@@ -121,8 +133,6 @@ def integrate_energy_and_transmission(ndotv: float, alpha: float, eta: float, nu
     np.random.seed(seed=int(ndotv * 1000 + alpha * 10000))
 #   np.random.seed(seed=int(ndotv * 1000 + alpha * 10000))
 
-    valid_samples: int = 0
-#   valid_samples: int = 0
     i: int
 #   i: int
     for i in range(num_samples):
@@ -161,8 +171,8 @@ def integrate_energy_and_transmission(ndotv: float, alpha: float, eta: float, nu
 
         F: float = FrDielectric(cosThetaI=v_dot_m, etaI=1.0, etaT=eta)
 #       F: float = FrDielectric(cosThetaI=v_dot_m, etaI=1.0, etaT=eta)
-        G: float = GGX_G1(v_z=v_z, alpha=alpha) * GGX_G1(v_z=max(0.001, l_r_z), alpha=alpha)
-#       G: float = GGX_G1(v_z=v_z, alpha=alpha) * GGX_G1(v_z=max(0.001, l_r_z), alpha=alpha)
+        G: float = GGX_G_correlated(v_z=v_z, l_z=max(0.001, l_r_z), alpha=alpha)
+#       G: float = GGX_G_correlated(v_z=v_z, l_z=max(0.001, l_r_z), alpha=alpha)
 
         # Weight for reflection importance sampling: F * G * v_dot_m / (v_z * m_z)
 #       # Weight for reflection importance sampling: F * G * v_dot_m / (v_z * m_z)
@@ -203,31 +213,44 @@ def integrate_energy_and_transmission(ndotv: float, alpha: float, eta: float, nu
 #               l_dot_m: float = - (l_t_x * m_x + l_t_y * m_y - l_t_z * m_z) # l is pointing outwards from surface for dot product
                 if l_dot_m > 0.0:
 #               if l_dot_m > 0.0:
-                    G_t: float = GGX_G1(v_z=v_z, alpha=alpha) * GGX_G1(v_z=l_t_z, alpha=alpha)
-#                   G_t: float = GGX_G1(v_z=v_z, alpha=alpha) * GGX_G1(v_z=l_t_z, alpha=alpha)
+                    G_t: float = GGX_G_correlated(v_z=v_z, l_z=l_t_z, alpha=alpha)
+#                   G_t: float = GGX_G_correlated(v_z=v_z, l_z=l_t_z, alpha=alpha)
 
-                    # Weight for transmission importance sampling
-#                   # Weight for transmission importance sampling
-                    # From Walter et al. 2007: Microfacet Models for Refraction
-#                   # From Walter et al. 2007: Microfacet Models for Refraction
-                    # The integral of BTDF * cos(theta_l) over the hemisphere
-#                   # The integral of BTDF * cos(theta_l) over the hemisphere
-                    weight_t: float = (1.0 - F) * G_t * v_dot_m / (v_z * m_z + 0.0001)
-#                   weight_t: float = (1.0 - F) * G_t * v_dot_m / (v_z * m_z + 0.0001)
-                    sum_Et += weight_t
-#                   sum_Et += weight_t
-                    sum_E_split_sum += weight_t * math.pow(1.0 - max(0.0, v_z), 5.0)
-#                   sum_E_split_sum += weight_t * math.pow(1.0 - max(0.0, v_z), 5.0)
+                    # Base transmission importance sampling weight without Fresnel (Walter et al. 2007).
+#                   # Base transmission importance sampling weight without Fresnel (Walter et al. 2007).
+                    # The Fresnel term is factored out to enable Schlick split-sum decomposition in the shader,
+#                   # The Fresnel term is factored out to enable Schlick split-sum decomposition in the shader,
+                    # where the runtime applies (1-F0) analytically instead of baking it into the LUT.
+#                   # where the runtime applies (1-F0) analytically instead of baking it into the LUT.
+                    weight_t_no_fresnel: float = G_t * v_dot_m / (v_z * m_z + 0.0001)
+#                   weight_t_no_fresnel: float = G_t * v_dot_m / (v_z * m_z + 0.0001)
+                    # Fresnel-inclusive weight for the energy compensation LUT that tracks actual transmitted energy.
+#                   # Fresnel-inclusive weight for the energy compensation LUT that tracks actual transmitted energy.
+                    weight_t_with_fresnel: float = (1.0 - F) * weight_t_no_fresnel
+#                   weight_t_with_fresnel: float = (1.0 - F) * weight_t_no_fresnel
+                    sum_Et_with_fresnel += weight_t_with_fresnel
+#                   sum_Et_with_fresnel += weight_t_with_fresnel
+                    # Fresnel-free accumulators for the transmission split-sum LUT.
+#                   # Fresnel-free accumulators for the transmission split-sum LUT.
+                    # The Schlick bias term uses the micro half-angle (v_dot_m) to correctly capture
+#                   # The Schlick bias term uses the micro half-angle (v_dot_m) to correctly capture
+                    # per-microfacet Fresnel variation at grazing incidence.
+#                   # per-microfacet Fresnel variation at grazing incidence.
+                    sum_Et_no_fresnel += weight_t_no_fresnel
+#                   sum_Et_no_fresnel += weight_t_no_fresnel
+                    sum_E_split_sum_no_fresnel += weight_t_no_fresnel * math.pow(1.0 - max(0.0, v_dot_m), 5.0)
+#                   sum_E_split_sum_no_fresnel += weight_t_no_fresnel * math.pow(1.0 - max(0.0, v_dot_m), 5.0)
 
-        valid_samples += 1
-#       valid_samples += 1
-
-    if valid_samples > 0:
-#   if valid_samples > 0:
-        return sum_Er / valid_samples, sum_Et / valid_samples, sum_E_split_sum / valid_samples, 1.0
-#       return sum_Er / valid_samples, sum_Et / valid_samples, sum_E_split_sum / valid_samples, 1.0
-    return 0.0, 0.0, 0.0, 1.0
-#   return 0.0, 0.0, 0.0, 1.0
+    # Normalize by the total number of Monte Carlo samples drawn, not just those with v_dot_m > 0.
+#   # Normalize by the total number of Monte Carlo samples drawn, not just those with v_dot_m > 0.
+    # Samples where the half-vector faces away from the view direction (v_dot_m <= 0) contribute zero weight
+#   # Samples where the half-vector faces away from the view direction (v_dot_m <= 0) contribute zero weight
+    # but are legitimate draws from the GGX importance sampling PDF and must be counted in the denominator
+#   # but are legitimate draws from the GGX importance sampling PDF and must be counted in the denominator
+    # to avoid overestimating energy at grazing angles where many half-vectors are backfacing.
+#   # to avoid overestimating energy at grazing angles where many half-vectors are backfacing.
+    return sum_Er / num_samples, sum_Et_no_fresnel / num_samples, sum_E_split_sum_no_fresnel / num_samples, sum_Et_with_fresnel / num_samples
+#   return sum_Er / num_samples, sum_Et_no_fresnel / num_samples, sum_E_split_sum_no_fresnel / num_samples, sum_Et_with_fresnel / num_samples
 
 def compute_energy_row(y: int, res_x: int, res_y: int, eta: float) -> Tuple[int, npt.NDArray[np.float32], npt.NDArray[np.float32]]:
     roughness: float = y / (res_y - 1.0)
@@ -249,24 +272,30 @@ def compute_energy_row(y: int, res_x: int, res_y: int, eta: float) -> Tuple[int,
 
         Er: float
 #       Er: float
-        Et: float
-#       Et: float
-        E_split_sum: float
-#       E_split_sum: float
-        _: float
-#       _: float
-        Er, Et, E_split_sum, _ = integrate_energy_and_transmission(ndotv=ndotv, alpha=alpha, eta=eta, num_samples=1024)
-#       Er, Et, E_split_sum, _ = integrate_energy_and_transmission(ndotv=ndotv, alpha=alpha, eta=eta, num_samples=1024)
+        Et_no_fresnel: float
+#       Et_no_fresnel: float
+        E_split_sum_no_fresnel: float
+#       E_split_sum_no_fresnel: float
+        Et_with_fresnel: float
+#       Et_with_fresnel: float
+        Er, Et_no_fresnel, E_split_sum_no_fresnel, Et_with_fresnel = integrate_energy_and_transmission(ndotv=ndotv, alpha=alpha, eta=eta, num_samples=1024)
+#       Er, Et_no_fresnel, E_split_sum_no_fresnel, Et_with_fresnel = integrate_energy_and_transmission(ndotv=ndotv, alpha=alpha, eta=eta, num_samples=1024)
 
-        # Energy Comp LUT: R = Er (Reflection), G = Et (Transmission), B = Total (Er + Et)
-#       # Energy Comp LUT: R = Er (Reflection), G = Et (Transmission), B = Total (Er + Et)
-        row_energy[x] = np.array(object=[Er, Et, Er + Et], dtype=np.float32)[::-1] # BGR
-#       row_energy[x] = np.array(object=[Er, Et, Er + Et], dtype=np.float32)[::-1] # BGR
+        # Energy Comp LUT: R = Er (Reflection), G = Et (Transmission with Fresnel), B = Total (Er + Et)
+#       # Energy Comp LUT: R = Er (Reflection), G = Et (Transmission with Fresnel), B = Total (Er + Et)
+        # These are the actual single-scatter directional albedos including Fresnel weighting,
+#       # These are the actual single-scatter directional albedos including Fresnel weighting,
+        # used by the shader's Kulla-Conty multi-scatter energy compensation framework.
+#       # used by the shader's Kulla-Conty multi-scatter energy compensation framework.
+        row_energy[x] = np.array(object=[Er, Et_with_fresnel, Er + Et_with_fresnel], dtype=np.float32)[::-1] # BGR
+#       row_energy[x] = np.array(object=[Er, Et_with_fresnel, Er + Et_with_fresnel], dtype=np.float32)[::-1] # BGR
 
-        # Transmission LUT: R = Split-sum base, G = Split-sum bias, B = Roughness mapping
-#       # Transmission LUT: R = Split-sum base, G = Split-sum bias, B = Roughness mapping
-        row_trans[x] = np.array(object=[Et, E_split_sum, roughness], dtype=np.float32)[::-1] # BGR
-#       row_trans[x] = np.array(object=[Et, E_split_sum, roughness], dtype=np.float32)[::-1] # BGR
+        # Transmission LUT: R = Split-sum base (no Fresnel), G = Split-sum Schlick bias (no Fresnel), B = Roughness mapping
+#       # Transmission LUT: R = Split-sum base (no Fresnel), G = Split-sum Schlick bias (no Fresnel), B = Roughness mapping
+        # Fresnel is excluded so the shader can apply (1-F0) analytically via Schlick split-sum decomposition.
+#       # Fresnel is excluded so the shader can apply (1-F0) analytically via Schlick split-sum decomposition.
+        row_trans[x] = np.array(object=[Et_no_fresnel, E_split_sum_no_fresnel, roughness], dtype=np.float32)[::-1] # BGR
+#       row_trans[x] = np.array(object=[Et_no_fresnel, E_split_sum_no_fresnel, roughness], dtype=np.float32)[::-1] # BGR
 
     return y, row_energy, row_trans
 #   return y, row_energy, row_trans

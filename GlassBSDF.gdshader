@@ -18,8 +18,8 @@
 //  // The 2D Look-Up Table (LUT) for Pre-integrated Rough Transmission.
     // This texture maps the relationship between the viewing angle (N.V) and surface roughness to simulate blurred refraction.
 //  // This texture maps the relationship between the viewing angle (N.V) and surface roughness to simulate blurred refraction.
-    // R = Split-Sum Base (Et), G = Split-Sum Bias, B = Roughness mapping for screen texture mipmap selection.
-//  // R = Split-Sum Base (Et), G = Split-Sum Bias, B = Roughness mapping for screen texture mipmap selection.
+    // R = Split-Sum Base (Et), G = Split-Sum Fresnel Bias (E_split_sum), B = Roughness mapping for screen texture mipmap selection.
+//  // R = Split-Sum Base (Et), G = Split-Sum Fresnel Bias (E_split_sum), B = Roughness mapping for screen texture mipmap selection.
     uniform sampler2D glass_lut_transmission_texture : hint_default_black, filter_linear, repeat_disable;
 //  uniform sampler2D glass_lut_transmission_texture : hint_default_black, filter_linear, repeat_disable;
 
@@ -88,6 +88,20 @@
 //      vec3 normalized_surface_normal_vector = normalize(NORMAL);
         vec3 normalized_outgoing_view_direction = normalize(VIEW);
 //      vec3 normalized_outgoing_view_direction = normalize(VIEW);
+
+        // Flip the surface normal for interior backfaces to ensure correct refraction direction and LUT sampling.
+//      // Flip the surface normal for interior backfaces to ensure correct refraction direction and LUT sampling.
+        // When cull_disabled is active, backface normals point away from the camera, producing negative NdotV values
+//      // When cull_disabled is active, backface normals point away from the camera, producing negative NdotV values
+        // that would collapse all LUT samples to the edge-on boundary if left uncorrected.
+//      // that would collapse all LUT samples to the edge-on boundary if left uncorrected.
+        if (!FRONT_FACING) {
+//      if (!FRONT_FACING) {
+            normalized_surface_normal_vector = -normalized_surface_normal_vector;
+//          normalized_surface_normal_vector = -normalized_surface_normal_vector;
+        }
+//      }
+
         // Calculate the cosine of the angle between the surface normal and the view direction, ensuring it is non-negative.
 //      // Calculate the cosine of the angle between the surface normal and the view direction, ensuring it is non-negative.
         float dot_product_normal_and_view_direction = max(0.0, dot(normalized_surface_normal_vector, normalized_outgoing_view_direction));
@@ -97,8 +111,18 @@
 //      // 2. Sample Pre-calculated Look-Up Tables
         // Construct the 2D UV coordinates based on the viewing angle and the surface roughness parameter.
 //      // Construct the 2D UV coordinates based on the viewing angle and the surface roughness parameter.
+        // Apply a half-texel offset and scale correction to ensure proper texel-center sampling at LUT boundaries.
+//      // Apply a half-texel offset and scale correction to ensure proper texel-center sampling at LUT boundaries.
+        // For 128-texel LUTs: scale = 127.0 / 128.0 = 0.9921875, offset = 0.5 / 128.0 = 0.00390625.
+//      // For 128-texel LUTs: scale = 127.0 / 128.0 = 0.9921875, offset = 0.5 / 128.0 = 0.00390625.
+        const float constant_glass_2d_lut_half_texel_scale = 0.9921875;
+//      const float constant_glass_2d_lut_half_texel_scale = 0.9921875;
+        const float constant_glass_2d_lut_half_texel_offset = 0.00390625;
+//      const float constant_glass_2d_lut_half_texel_offset = 0.00390625;
         vec2 calculated_lut_sampling_uv_coordinates = vec2(dot_product_normal_and_view_direction, glass_roughness);
 //      vec2 calculated_lut_sampling_uv_coordinates = vec2(dot_product_normal_and_view_direction, glass_roughness);
+        calculated_lut_sampling_uv_coordinates = calculated_lut_sampling_uv_coordinates * constant_glass_2d_lut_half_texel_scale + constant_glass_2d_lut_half_texel_offset;
+//      calculated_lut_sampling_uv_coordinates = calculated_lut_sampling_uv_coordinates * constant_glass_2d_lut_half_texel_scale + constant_glass_2d_lut_half_texel_offset;
         vec3 sampled_energy_compensation_color = texture(glass_lut_energy_comp_texture, calculated_lut_sampling_uv_coordinates).rgb;
 //      vec3 sampled_energy_compensation_color = texture(glass_lut_energy_comp_texture, calculated_lut_sampling_uv_coordinates).rgb;
         vec3 sampled_transmission_lut_color = texture(glass_lut_transmission_texture, calculated_lut_sampling_uv_coordinates).rgb;
@@ -108,84 +132,171 @@
 //      // The Volumetric Absorption Look-Up Table is 1-Dimensional and parameterized purely by object thickness.
         // We normalize the user-defined thickness against the maximum baked limit of 10.0 to find the correct texture coordinate.
 //      // We normalize the user-defined thickness against the maximum baked limit of 10.0 to find the correct texture coordinate.
+        // For 256-texel 1D absorption LUT: scale = 255.0 / 256.0 = 0.99609375, offset = 0.5 / 256.0 = 0.001953125.
+//      // For 256-texel 1D absorption LUT: scale = 255.0 / 256.0 = 0.99609375, offset = 0.5 / 256.0 = 0.001953125.
+        const float constant_glass_1d_lut_half_texel_scale = 0.99609375;
+//      const float constant_glass_1d_lut_half_texel_scale = 0.99609375;
+        const float constant_glass_1d_lut_half_texel_offset = 0.001953125;
+//      const float constant_glass_1d_lut_half_texel_offset = 0.001953125;
         float calculated_volumetric_thickness_u_coordinate = clamp(glass_thickness / 10.0, 0.0, 1.0);
 //      float calculated_volumetric_thickness_u_coordinate = clamp(glass_thickness / 10.0, 0.0, 1.0);
+        calculated_volumetric_thickness_u_coordinate = calculated_volumetric_thickness_u_coordinate * constant_glass_1d_lut_half_texel_scale + constant_glass_1d_lut_half_texel_offset;
+//      calculated_volumetric_thickness_u_coordinate = calculated_volumetric_thickness_u_coordinate * constant_glass_1d_lut_half_texel_scale + constant_glass_1d_lut_half_texel_offset;
         vec3 sampled_volumetric_absorption_tint_color = texture(glass_lut_absorption_texture, vec2(calculated_volumetric_thickness_u_coordinate, 0.5)).rgb;
 //      vec3 sampled_volumetric_absorption_tint_color = texture(glass_lut_absorption_texture, vec2(calculated_volumetric_thickness_u_coordinate, 0.5)).rgb;
 
         // 3. Compute Refraction Direction Vector via Snell's Law
 //      // 3. Compute Refraction Direction Vector via Snell's Law
-        // Calculate the relative index of refraction, assuming light is transitioning from standard air (IOR 1.0) into the glass medium.
-//      // Calculate the relative index of refraction, assuming light is transitioning from standard air (IOR 1.0) into the glass medium.
-        float calculated_relative_index_of_refraction_eta = 1.0 / glass_ior;
-//      float calculated_relative_index_of_refraction_eta = 1.0 / glass_ior;
+        // Calculate the relative index of refraction based on the surface orientation.
+//      // Calculate the relative index of refraction based on the surface orientation.
+        // For front faces, light transitions from air (IOR 1.0) into the glass medium: eta = 1.0 / IOR.
+//      // For front faces, light transitions from air (IOR 1.0) into the glass medium: eta = 1.0 / IOR.
+        // For back faces, light transitions from the glass medium back into air: eta = IOR / 1.0.
+//      // For back faces, light transitions from the glass medium back into air: eta = IOR / 1.0.
+        float calculated_relative_index_of_refraction_eta = FRONT_FACING ? (1.0 / glass_ior) : glass_ior;
+//      float calculated_relative_index_of_refraction_eta = FRONT_FACING ? (1.0 / glass_ior) : glass_ior;
         vec3 calculated_refraction_direction_vector = refract(-normalized_outgoing_view_direction, normalized_surface_normal_vector, calculated_relative_index_of_refraction_eta);
 //      vec3 calculated_refraction_direction_vector = refract(-normalized_outgoing_view_direction, normalized_surface_normal_vector, calculated_relative_index_of_refraction_eta);
 
-        // Project the computed 3D refraction direction into 2D screen UV space.
-//      // Project the computed 3D refraction direction into 2D screen UV space.
-        // This offset is linearly approximated based on the simulated object thickness to distort the background realistically.
-//      // This offset is linearly approximated based on the simulated object thickness to distort the background realistically.
-        vec2 calculated_screen_space_refraction_uv_offset = calculated_refraction_direction_vector.xy * (glass_thickness * 0.05);
-//      vec2 calculated_screen_space_refraction_uv_offset = calculated_refraction_direction_vector.xy * (glass_thickness * 0.05);
+        // Detect Total Internal Reflection (TIR) using a near-zero squared length threshold.
+//      // Detect Total Internal Reflection (TIR) using a near-zero squared length threshold.
+        // TIR is physically possible on backfaces where light exits the denser glass medium at steep angles.
+//      // TIR is physically possible on backfaces where light exits the denser glass medium at steep angles.
+        // This avoids exact floating-point equality comparison against vec3(0.0), which can fail
+//      // This avoids exact floating-point equality comparison against vec3(0.0), which can fail
+        // on some GPU drivers where refract() returns near-zero instead of exact zero during TIR.
+//      // on some GPU drivers where refract() returns near-zero instead of exact zero during TIR.
+        // Using dot(v,v) instead of length(v) avoids a square root instruction in the fragment shader.
+//      // Using dot(v,v) instead of length(v) avoids a square root instruction in the fragment shader.
+        bool is_total_internal_reflection = (dot(calculated_refraction_direction_vector, calculated_refraction_direction_vector) < 0.00000001);
+//      bool is_total_internal_reflection = (dot(calculated_refraction_direction_vector, calculated_refraction_direction_vector) < 0.00000001);
 
-        // 4. Determine Screen Texture Mipmap Level for Rough Transmission Simulation
-//      // 4. Determine Screen Texture Mipmap Level for Rough Transmission Simulation
-        // The blue channel of the transmission LUT contains the pre-calculated roughness mapping coefficient.
-//      // The blue channel of the transmission LUT contains the pre-calculated roughness mapping coefficient.
-        // We scale this mapped roughness by the maximum expected mipmap lod levels to determine the sampling blurriness.
-//      // We scale this mapped roughness by the maximum expected mipmap lod levels to determine the sampling blurriness.
-        float maximum_mipmap_level_of_detail = 7.0;
-//      float maximum_mipmap_level_of_detail = 7.0;
-        float calculated_roughness_mipmap_level_of_detail = sampled_transmission_lut_color.b * maximum_mipmap_level_of_detail;
-//      float calculated_roughness_mipmap_level_of_detail = sampled_transmission_lut_color.b * maximum_mipmap_level_of_detail;
+        // Pre-compute the fundamental Fresnel Reflectance at normal incidence (F0) using the standard dielectric equation.
+//      // Pre-compute the fundamental Fresnel Reflectance at normal incidence (F0) using the standard dielectric equation.
+        // This is needed both for the Fresnel-correct split-sum transmission decomposition below and for the final SPECULAR output.
+//      // This is needed both for the Fresnel-correct split-sum transmission decomposition below and for the final SPECULAR output.
+        float calculated_fresnel_reflectance_at_normal_incidence_f0 = pow((glass_ior - 1.0) / (glass_ior + 1.0), 2.0);
+//      float calculated_fresnel_reflectance_at_normal_incidence_f0 = pow((glass_ior - 1.0) / (glass_ior + 1.0), 2.0);
 
-        // 5. Sample the Screen Texture and Apply Simulated Chromatic Aberration Dispersion
-//      // 5. Sample the Screen Texture and Apply Simulated Chromatic Aberration Dispersion
-        vec3 sampled_refracted_screen_texture_color = vec3(0.0);
-//      vec3 sampled_refracted_screen_texture_color = vec3(0.0);
-        if (chromatic_aberration_intensity > 0.001) {
-//      if (chromatic_aberration_intensity > 0.001) {
-            // We sample the red, green, and blue color channels independently with slight positional UV offsets.
-//          // We sample the red, green, and blue color channels independently with slight positional UV offsets.
-            // This multi-sampling simulates the physical dispersion of varying light wavelengths passing through the dense medium.
-//          // This multi-sampling simulates the physical dispersion of varying light wavelengths passing through the dense medium.
-            float calculated_chromatic_aberration_uv_offset = chromatic_aberration_intensity * 0.02 * glass_thickness;
-//          float calculated_chromatic_aberration_uv_offset = chromatic_aberration_intensity * 0.02 * glass_thickness;
-            sampled_refracted_screen_texture_color.r = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset * (1.0 + calculated_chromatic_aberration_uv_offset), calculated_roughness_mipmap_level_of_detail).r;
-//          sampled_refracted_screen_texture_color.r = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset * (1.0 + calculated_chromatic_aberration_uv_offset), calculated_roughness_mipmap_level_of_detail).r;
-            sampled_refracted_screen_texture_color.g = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset, calculated_roughness_mipmap_level_of_detail).g;
-//          sampled_refracted_screen_texture_color.g = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset, calculated_roughness_mipmap_level_of_detail).g;
-            sampled_refracted_screen_texture_color.b = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset * (1.0 - calculated_chromatic_aberration_uv_offset), calculated_roughness_mipmap_level_of_detail).b;
-//          sampled_refracted_screen_texture_color.b = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset * (1.0 - calculated_chromatic_aberration_uv_offset), calculated_roughness_mipmap_level_of_detail).b;
-        } else {
-//      } else {
-            // If the chromatic aberration effect is disabled, perform a single unified texture sample for efficiency.
-//          // If the chromatic aberration effect is disabled, perform a single unified texture sample for efficiency.
-            sampled_refracted_screen_texture_color = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset, calculated_roughness_mipmap_level_of_detail).rgb;
-//          sampled_refracted_screen_texture_color = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset, calculated_roughness_mipmap_level_of_detail).rgb;
+        // When TIR occurs, all incident light is reflected and no transmission passes through the medium.
+//      // When TIR occurs, all incident light is reflected and no transmission passes through the medium.
+        // We skip the entire transmission pipeline (screen sampling, absorption, energy compensation) to avoid
+//      // We skip the entire transmission pipeline (screen sampling, absorption, energy compensation) to avoid
+        // wasted texture fetches and ALU work that would be discarded. Godot's built-in GGX specular reflection
+//      // wasted texture fetches and ALU work that would be discarded. Godot's built-in GGX specular reflection
+        // continues to operate normally outside this branch to represent the reflected component.
+//      // continues to operate normally outside this branch to represent the reflected component.
+        vec3 calculated_final_transmission_color = vec3(0.0);
+//      vec3 calculated_final_transmission_color = vec3(0.0);
+        if (!is_total_internal_reflection) {
+//      if (!is_total_internal_reflection) {
+            // Project the computed 3D refraction direction into 2D screen UV space.
+//          // Project the computed 3D refraction direction into 2D screen UV space.
+            // This offset is linearly approximated based on the simulated object thickness to distort the background realistically.
+//          // This offset is linearly approximated based on the simulated object thickness to distort the background realistically.
+            vec2 calculated_screen_space_refraction_uv_offset = calculated_refraction_direction_vector.xy * (glass_thickness * 0.05);
+//          vec2 calculated_screen_space_refraction_uv_offset = calculated_refraction_direction_vector.xy * (glass_thickness * 0.05);
+
+            // 4. Determine Screen Texture Mipmap Level for Rough Transmission Simulation
+//          // 4. Determine Screen Texture Mipmap Level for Rough Transmission Simulation
+            // The blue channel of the transmission LUT contains the pre-calculated roughness mapping coefficient.
+//          // The blue channel of the transmission LUT contains the pre-calculated roughness mapping coefficient.
+            // We scale this mapped roughness by the maximum expected mipmap lod levels to determine the sampling blurriness.
+//          // We scale this mapped roughness by the maximum expected mipmap lod levels to determine the sampling blurriness.
+            const float constant_maximum_mipmap_level_of_detail = 7.0;
+//          const float constant_maximum_mipmap_level_of_detail = 7.0;
+            float calculated_roughness_mipmap_level_of_detail = sampled_transmission_lut_color.b * constant_maximum_mipmap_level_of_detail;
+//          float calculated_roughness_mipmap_level_of_detail = sampled_transmission_lut_color.b * constant_maximum_mipmap_level_of_detail;
+
+            // 5. Sample the Screen Texture and Apply Simulated Chromatic Aberration Dispersion
+//          // 5. Sample the Screen Texture and Apply Simulated Chromatic Aberration Dispersion
+            vec3 sampled_refracted_screen_texture_color = vec3(0.0);
+//          vec3 sampled_refracted_screen_texture_color = vec3(0.0);
+            if (chromatic_aberration_intensity > 0.001) {
+//          if (chromatic_aberration_intensity > 0.001) {
+                // We sample the red, green, and blue color channels independently with slight positional UV offsets.
+//              // We sample the red, green, and blue color channels independently with slight positional UV offsets.
+                // This multi-sampling simulates the physical dispersion of varying light wavelengths passing through the dense medium.
+//              // This multi-sampling simulates the physical dispersion of varying light wavelengths passing through the dense medium.
+                // In normal dispersion (Cauchy equation), shorter wavelengths (blue) have higher refractive index and bend more than
+//              // In normal dispersion (Cauchy equation), shorter wavelengths (blue) have higher refractive index and bend more than
+                // longer wavelengths (red), so blue receives the larger UV offset and red receives the smaller UV offset.
+//              // longer wavelengths (red), so blue receives the larger UV offset and red receives the smaller UV offset.
+                float calculated_chromatic_aberration_uv_offset = chromatic_aberration_intensity * 0.02 * glass_thickness;
+//              float calculated_chromatic_aberration_uv_offset = chromatic_aberration_intensity * 0.02 * glass_thickness;
+                sampled_refracted_screen_texture_color.r = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset * (1.0 - calculated_chromatic_aberration_uv_offset), calculated_roughness_mipmap_level_of_detail).r;
+//              sampled_refracted_screen_texture_color.r = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset * (1.0 - calculated_chromatic_aberration_uv_offset), calculated_roughness_mipmap_level_of_detail).r;
+                sampled_refracted_screen_texture_color.g = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset, calculated_roughness_mipmap_level_of_detail).g;
+//              sampled_refracted_screen_texture_color.g = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset, calculated_roughness_mipmap_level_of_detail).g;
+                sampled_refracted_screen_texture_color.b = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset * (1.0 + calculated_chromatic_aberration_uv_offset), calculated_roughness_mipmap_level_of_detail).b;
+//              sampled_refracted_screen_texture_color.b = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset * (1.0 + calculated_chromatic_aberration_uv_offset), calculated_roughness_mipmap_level_of_detail).b;
+            } else {
+//          } else {
+                // If the chromatic aberration effect is disabled, perform a single unified texture sample for efficiency.
+//              // If the chromatic aberration effect is disabled, perform a single unified texture sample for efficiency.
+                sampled_refracted_screen_texture_color = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset, calculated_roughness_mipmap_level_of_detail).rgb;
+//              sampled_refracted_screen_texture_color = textureLod(screen_texture, SCREEN_UV + calculated_screen_space_refraction_uv_offset, calculated_roughness_mipmap_level_of_detail).rgb;
+            }
+//          }
+
+            // 6. Combine Core Transmission with Base Material Color and Look-Up Tables
+//          // 6. Combine Core Transmission with Base Material Color and Look-Up Tables
+            // Apply the Fresnel-correct split-sum transmission decomposition to the refracted background light.
+//          // Apply the Fresnel-correct split-sum transmission decomposition to the refracted background light.
+            // The Schlick approximation factors the transmission integral as T = (1 - F0) * (Et - E_split_sum),
+//          // The Schlick approximation factors the transmission integral as T = (1 - F0) * (Et - E_split_sum),
+            // where Et is the total pre-integrated transmission energy (LUT red channel) and
+//          // where Et is the total pre-integrated transmission energy (LUT red channel) and
+            // E_split_sum is the Fresnel-weighted bias term (LUT green channel).
+//          // E_split_sum is the Fresnel-weighted bias term (LUT green channel).
+            // This prevents over-transmission at normal incidence for high-IOR materials where F0 is significant.
+//          // This prevents over-transmission at normal incidence for high-IOR materials where F0 is significant.
+            float calculated_fresnel_split_sum_transmission_factor = (1.0 - calculated_fresnel_reflectance_at_normal_incidence_f0) * (sampled_transmission_lut_color.r - sampled_transmission_lut_color.g);
+//          float calculated_fresnel_split_sum_transmission_factor = (1.0 - calculated_fresnel_reflectance_at_normal_incidence_f0) * (sampled_transmission_lut_color.r - sampled_transmission_lut_color.g);
+            // The final refracted background light is systematically modulated by the foundational base color of the material,
+//          // The final refracted background light is systematically modulated by the foundational base color of the material,
+            // the calculated volumetric absorption tint profile, and the Fresnel-correct split-sum transmission factor.
+//          // the calculated volumetric absorption tint profile, and the Fresnel-correct split-sum transmission factor.
+            calculated_final_transmission_color = sampled_refracted_screen_texture_color * glass_base_color * sampled_volumetric_absorption_tint_color * calculated_fresnel_split_sum_transmission_factor;
+//          calculated_final_transmission_color = sampled_refracted_screen_texture_color * glass_base_color * sampled_volumetric_absorption_tint_color * calculated_fresnel_split_sum_transmission_factor;
+
+            // 7. Apply the Kulla-Conty Multiple Scattering Energy Compensation Framework
+//          // 7. Apply the Kulla-Conty Multiple Scattering Energy Compensation Framework
+            // The blue channel of the energy compensation LUT stores the total single-scatter energy (Er + Et).
+//          // The blue channel of the energy compensation LUT stores the total single-scatter energy (Er + Et).
+            // The missing multi-scatter energy is (1.0 - total_single_scatter), representing light that bounced
+//          // The missing multi-scatter energy is (1.0 - total_single_scatter), representing light that bounced
+            // multiple times between microfacets before escaping. This fraction is distributed proportionally
+//          // multiple times between microfacets before escaping. This fraction is distributed proportionally
+            // back to transmission based on the ratio of transmitted to total single-scatter energy.
+//          // back to transmission based on the ratio of transmitted to total single-scatter energy.
+            float calculated_total_single_scatter_energy_for_transmission = sampled_energy_compensation_color.b;
+//          float calculated_total_single_scatter_energy_for_transmission = sampled_energy_compensation_color.b;
+            float calculated_missing_multi_scatter_energy_for_transmission = max(0.0, 1.0 - calculated_total_single_scatter_energy_for_transmission);
+//          float calculated_missing_multi_scatter_energy_for_transmission = max(0.0, 1.0 - calculated_total_single_scatter_energy_for_transmission);
+            float calculated_transmission_multi_scatter_recovery_fraction = calculated_missing_multi_scatter_energy_for_transmission * sampled_energy_compensation_color.g / max(calculated_total_single_scatter_energy_for_transmission, 0.001);
+//          float calculated_transmission_multi_scatter_recovery_fraction = calculated_missing_multi_scatter_energy_for_transmission * sampled_energy_compensation_color.g / max(calculated_total_single_scatter_energy_for_transmission, 0.001);
+            calculated_final_transmission_color += calculated_final_transmission_color * calculated_transmission_multi_scatter_recovery_fraction * energy_compensation_multiplier;
+//          calculated_final_transmission_color += calculated_final_transmission_color * calculated_transmission_multi_scatter_recovery_fraction * energy_compensation_multiplier;
         }
 //      }
 
-        // 6. Combine Core Transmission with Base Material Color and Look-Up Tables
-//      // 6. Combine Core Transmission with Base Material Color and Look-Up Tables
-        // The final refracted background light is systematically modulated by the foundational base color of the material,
-//      // The final refracted background light is systematically modulated by the foundational base color of the material,
-        // the calculated volumetric absorption tint profile, and the pre-integrated transmission split-sum base.
-//      // the calculated volumetric absorption tint profile, and the pre-integrated transmission split-sum base.
-        vec3 calculated_final_transmission_color = sampled_refracted_screen_texture_color * glass_base_color * sampled_volumetric_absorption_tint_color * sampled_transmission_lut_color.r;
-//      vec3 calculated_final_transmission_color = sampled_refracted_screen_texture_color * glass_base_color * sampled_volumetric_absorption_tint_color * sampled_transmission_lut_color.r;
-
-        // 7. Apply the Multiple Scattering Energy Compensation Framework
-//      // 7. Apply the Multiple Scattering Energy Compensation Framework
-        // The green color channel of the energy compensation LUT stores the pre-calculated pre-integrated transmitted energy.
-//      // The green color channel of the energy compensation LUT stores the pre-calculated pre-integrated transmitted energy.
-        // By additively accumulating this energy back into the transmission pass, physically rough glass materials correctly
-//      // By additively accumulating this energy back into the transmission pass, physically rough glass materials correctly
-        // maintain their realistic ambient brightness instead of artificially darkening at high microfacet roughness values.
-//      // maintain their realistic ambient brightness instead of artificially darkening at high microfacet roughness values.
-        calculated_final_transmission_color += calculated_final_transmission_color * sampled_energy_compensation_color.g * energy_compensation_multiplier;
-//      calculated_final_transmission_color += calculated_final_transmission_color * sampled_energy_compensation_color.g * energy_compensation_multiplier;
+        // 7c. Apply the Kulla-Conty Reflected Energy Compensation for Multiple Scattering
+//      // 7c. Apply the Kulla-Conty Reflected Energy Compensation for Multiple Scattering
+        // The red channel stores the single-scatter reflected directional albedo (Er), and the blue channel
+//      // The red channel stores the single-scatter reflected directional albedo (Er), and the blue channel
+        // stores the total single-scatter energy (Er + Et). The missing multi-scatter energy (1 - total)
+//      // stores the total single-scatter energy (Er + Et). The missing multi-scatter energy (1 - total)
+        // is distributed proportionally to reflection based on Er / total, recovering only the multi-bounce
+//      // is distributed proportionally to reflection based on Er / total, recovering only the multi-bounce
+        // specular contribution that the engine's single-scatter GGX evaluation misses.
+//      // specular contribution that the engine's single-scatter GGX evaluation misses.
+        float calculated_total_single_scatter_energy_for_reflection = sampled_energy_compensation_color.b;
+//      float calculated_total_single_scatter_energy_for_reflection = sampled_energy_compensation_color.b;
+        float calculated_missing_multi_scatter_energy_for_reflection = max(0.0, 1.0 - calculated_total_single_scatter_energy_for_reflection);
+//      float calculated_missing_multi_scatter_energy_for_reflection = max(0.0, 1.0 - calculated_total_single_scatter_energy_for_reflection);
+        vec3 calculated_reflected_energy_compensation_color = vec3(calculated_missing_multi_scatter_energy_for_reflection * sampled_energy_compensation_color.r / max(calculated_total_single_scatter_energy_for_reflection, 0.001) * energy_compensation_multiplier);
+//      vec3 calculated_reflected_energy_compensation_color = vec3(calculated_missing_multi_scatter_energy_for_reflection * sampled_energy_compensation_color.r / max(calculated_total_single_scatter_energy_for_reflection, 0.001) * energy_compensation_multiplier);
 
         // 8. Output Final Shading Parameters to the Rendering Pipeline
 //      // 8. Output Final Shading Parameters to the Rendering Pipeline
@@ -202,8 +313,8 @@
 //      // Inject our customly constructed refracted transmission light profile directly into the EMISSION output parameter.
         // This forces the transmitted light to behave structurally as an unlit surface component within the rendering engine's forward pass.
 //      // This forces the transmitted light to behave structurally as an unlit surface component within the rendering engine's forward pass.
-        EMISSION = calculated_final_transmission_color;
-//      EMISSION = calculated_final_transmission_color;
+        EMISSION = calculated_final_transmission_color + calculated_reflected_energy_compensation_color;
+//      EMISSION = calculated_final_transmission_color + calculated_reflected_energy_compensation_color;
 
         // Set standard PBR surface properties to dictate how the material interacts with external environmental light reflections.
 //      // Set standard PBR surface properties to dictate how the material interacts with external environmental light reflections.
@@ -212,14 +323,10 @@
         METALLIC = 0.0; // Glass is fundamentally a dielectric insulator material, thus the metallic property is strictly fixed to 0.0.
 //      METALLIC = 0.0; // Glass is fundamentally a dielectric insulator material, thus the metallic property is strictly fixed to 0.0.
 
-        // Compute the engine-specific SPECULAR shading parameter mathematically derived from the configured Index of Refraction (IOR).
-//      // Compute the engine-specific SPECULAR shading parameter mathematically derived from the configured Index of Refraction (IOR).
-        // First, calculate the fundamental Fresnel Reflectance at normal incidence (F0) using the standard dielectric equation: F0 = ((IOR - 1)/(IOR + 1))^2.
-//      // First, calculate the fundamental Fresnel Reflectance at normal incidence (F0) using the standard dielectric equation: F0 = ((IOR - 1)/(IOR + 1))^2.
+        // Compute the engine-specific SPECULAR shading parameter from the pre-calculated Fresnel Reflectance at normal incidence (F0).
+//      // Compute the engine-specific SPECULAR shading parameter from the pre-calculated Fresnel Reflectance at normal incidence (F0).
         // The Godot engine maps a SPECULAR input of 0.5 to a baseline F0 of 0.04. Therefore, the conversion formula is F0 = 0.08 * SPECULAR.
 //      // The Godot engine maps a SPECULAR input of 0.5 to a baseline F0 of 0.04. Therefore, the conversion formula is F0 = 0.08 * SPECULAR.
-        float calculated_fresnel_reflectance_at_normal_incidence_f0 = pow((glass_ior - 1.0) / (glass_ior + 1.0), 2.0);
-//      float calculated_fresnel_reflectance_at_normal_incidence_f0 = pow((glass_ior - 1.0) / (glass_ior + 1.0), 2.0);
         SPECULAR = calculated_fresnel_reflectance_at_normal_incidence_f0 / 0.08;
 //      SPECULAR = calculated_fresnel_reflectance_at_normal_incidence_f0 / 0.08;
     }
