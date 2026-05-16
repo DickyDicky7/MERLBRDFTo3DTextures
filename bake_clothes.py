@@ -82,8 +82,8 @@ def evaluate_disney_cloth(ndotl: float, ndotv: float, ldotv: float, roughness: f
 #   # 3. Disney Fake Subsurface (Hanrahan-Krueger approx)
     Fss90: float = cosThetaD * cosThetaD * roughness
 #   Fss90: float = cosThetaD * cosThetaD * roughness
-    Fss: float = Lerp(a=Fo, b=1.0, t=Fss90) * Lerp(a=Fi, b=1.0, t=Fss90)
-#   Fss: float = Lerp(a=Fo, b=1.0, t=Fss90) * Lerp(a=Fi, b=1.0, t=Fss90)
+    Fss: float = Lerp(a=1.0, b=Fss90, t=Fo) * Lerp(a=1.0, b=Fss90, t=Fi)
+#   Fss: float = Lerp(a=1.0, b=Fss90, t=Fo) * Lerp(a=1.0, b=Fss90, t=Fi)
     ss: float = 1.25 * (Fss * (1.0 / max(1e-4, ndotl + ndotv) - 0.5) + 0.5)
 #   ss: float = 1.25 * (Fss * (1.0 / max(1e-4, ndotl + ndotv) - 0.5) + 0.5)
     fakess: float = (1.0 / math.pi) * ss
