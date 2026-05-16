@@ -14,34 +14,34 @@
 
     // --- Two-Pass Transparency Setup & Documentation ---
 //  // --- Two-Pass Transparency Setup & Documentation ---
-    // Mechanism & Algorithm:
-//  // Mechanism & Algorithm:
+    // Mechanism and Algorithm:
+//  // Mechanism and Algorithm:
     // Real-time rasterizers struggle to sort complex overlapping transparent geometry (such as hair strands) properly.
 //  // Real-time rasterizers struggle to sort complex overlapping transparent geometry (such as hair strands) properly.
     // The two-pass system solves this issue by breaking the rendering process into two distinct stages:
 //  // The two-pass system solves this issue by breaking the rendering process into two distinct stages:
     // 1. Pass 1 (Opaque Core): Renders only the dense, opaque parts of the hair (where Alpha >= Threshold) to the depth buffer.
 //  // 1. Pass 1 (Opaque Core): Renders only the dense, opaque parts of the hair (where Alpha >= Threshold) to the depth buffer.
-    //    This pass discards the soft, wispy edges. By writing to the depth buffer, it perfectly occludes the geometry behind it.
-//  //    This pass discards the soft, wispy edges. By writing to the depth buffer, it perfectly occludes the geometry behind it.
+    //    This pass discards the soft, wispy edges. By writing to the depth buffer, it correctly occludes the geometry behind it.
+//  //    This pass discards the soft, wispy edges. By writing to the depth buffer, it correctly occludes the geometry behind it.
     // 2. Pass 2 (Soft Fringes): Renders only the soft, transparent edges (where Alpha < Threshold) over the top.
 //  // 2. Pass 2 (Soft Fringes): Renders only the soft, transparent edges (where Alpha < Threshold) over the top.
     //    This pass discards the dense core to prevent overdraw. Because Pass 1 has already written to the depth buffer, these transparent edges
 //  //    This pass discards the dense core to prevent overdraw. Because Pass 1 has already written to the depth buffer, these transparent edges
-    //    will sort perfectly against the underlying solid hair structures.
-//  //    will sort perfectly against the underlying solid hair structures.
+    //    will sort correctly against the underlying solid hair structures.
+//  //    will sort correctly against the underlying solid hair structures.
     //
 //  //
     // How to set this up in Godot:
 //  // How to set this up in Godot:
     // Option A: Mode 0 (Single Pass Soft)
 //  // Option A: Mode 0 (Single Pass Soft)
-    // - Use this mode if perfect depth sorting is unnecessary, and you only require soft blending.
-//  // - Use this mode if perfect depth sorting is unnecessary, and you only require soft blending.
-    // - WARNING: Mode 0 has inherent transparency sorting artifacts with overlapping hair geometry
-//  // - WARNING: Mode 0 has inherent transparency sorting artifacts with overlapping hair geometry
-    // -   due to depth_prepass_alpha writing depth for semi-transparent fragments.
-//  // -   due to depth_prepass_alpha writing depth for semi-transparent fragments.
+    // - Use this mode when perfect depth sorting is unnecessary and only soft blending is needed.
+//  // - Use this mode when perfect depth sorting is unnecessary and only soft blending is needed.
+    // - WARNING: Mode 0 produces transparency sorting artifacts with overlapping hair geometry
+//  // - WARNING: Mode 0 produces transparency sorting artifacts with overlapping hair geometry
+    // -   because depth_prepass_alpha writes depth for semi-transparent fragments.
+//  // -   because depth_prepass_alpha writes depth for semi-transparent fragments.
     // -   For correct sorting, use Option B (Mode 1 + Mode 2) instead.
 //  // -   For correct sorting, use Option B (Mode 1 + Mode 2) instead.
     // - Set render_pass_mode to 0 on your primary material.
@@ -50,12 +50,12 @@
 //  //
     // Option B: Mode 1 + Mode 2 (Perfect Two-Pass Sorting)
 //  // Option B: Mode 1 + Mode 2 (Perfect Two-Pass Sorting)
-    // - 1. Apply a material with this shader to your mesh. Set render_pass_mode to 1, and set opaque_core_threshold to approximately 0.5.
-//  // - 1. Apply a material with this shader to your mesh. Set render_pass_mode to 1, and set opaque_core_threshold to approximately 0.5.
-    // - 2. Navigate to the "Next Pass" property of that material and add a new ShaderMaterial utilizing this exact same shader.
-//  // - 2. Navigate to the "Next Pass" property of that material and add a new ShaderMaterial utilizing this exact same shader.
-    // - 3. On the Next Pass material, set render_pass_mode to 2. Ensure the opaque_core_threshold matches the value from the first material.
-//  // - 3. On the Next Pass material, set render_pass_mode to 2. Ensure the opaque_core_threshold matches the value from the first material.
+    // 1. Apply a material with this shader to your mesh. Set render_pass_mode to 1 and set opaque_core_threshold to around 0.5.
+//  // 1. Apply a material with this shader to your mesh. Set render_pass_mode to 1 and set opaque_core_threshold to around 0.5.
+    // 2. Navigate to the "Next Pass" property of that material and add a new ShaderMaterial using this same shader.
+//  // 2. Navigate to the "Next Pass" property of that material and add a new ShaderMaterial using this same shader.
+    // 3. On the Next Pass material, set render_pass_mode to 2. Ensure the opaque_core_threshold matches the value from the first material.
+//  // 3. On the Next Pass material, set render_pass_mode to 2. Ensure the opaque_core_threshold matches the value from the first material.
     // ---------------------------------------------------
 //  // ---------------------------------------------------
 
@@ -93,14 +93,14 @@
     group_uniforms;
 //  group_uniforms;
 
-    // A normal map texture that adds micro-surface details without requiring additional geometry.
-//  // A normal map texture that adds micro-surface details without requiring additional geometry.
+    // A normal map texture that adds micro-surface detail without requiring additional geometry.
+//  // A normal map texture that adds micro-surface detail without requiring additional geometry.
     group_uniforms normal_map;
 //  group_uniforms normal_map;
     uniform sampler2D hair_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
 //  uniform sampler2D hair_normal_map_texture : hint_normal, filter_linear_mipmap, repeat_enable;
-    // A scale factor used to tile the normal map texture across the mesh surface.
-//  // A scale factor used to tile the normal map texture across the mesh surface.
+    // The scale factor used to tile the normal map texture across the mesh surface.
+//  // The scale factor used to tile the normal map texture across the mesh surface.
     uniform vec2 hair_normal_map_texture_uv_coordinate_scale = vec2(1.0, 1.0);
 //  uniform vec2 hair_normal_map_texture_uv_coordinate_scale = vec2(1.0, 1.0);
     // The overall strength of the normal map effect.
@@ -112,8 +112,8 @@
 
     // Ambient occlusion properties.
 //  // Ambient occlusion properties.
-    // These properties add localized shadowing to ground the hair strands and simulate self-occlusion.
-//  // These properties add localized shadowing to ground the hair strands and simulate self-occlusion.
+    // These properties add localized self-shadowing between hair strands to simulate self-occlusion.
+//  // These properties add localized self-shadowing between hair strands to simulate self-occlusion.
     group_uniforms ambient_occlusion;
 //  group_uniforms ambient_occlusion;
     uniform bool enable_hair_ambient_occlusion = false;
@@ -129,8 +129,8 @@
 
     // Advanced lighting and shading properties.
 //  // Advanced lighting and shading properties.
-    // These properties control how the hair reacts to direct light sources and indirect ambient lighting.
-//  // These properties control how the hair reacts to direct light sources and indirect ambient lighting.
+    // These properties control how the hair responds to direct light sources and indirect ambient lighting.
+//  // These properties control how the hair responds to direct light sources and indirect ambient lighting.
     group_uniforms lighting;
 //  group_uniforms lighting;
     uniform float indirect_ambient_albedo_scale : hint_range(0.0, 1.0) = 1.0;
@@ -145,19 +145,31 @@
 //  uniform bool enable_custom_ambient_lighting = false;
     uniform vec3 custom_ambient_color : source_color = vec3(0.05, 0.05, 0.05);
 //  uniform vec3 custom_ambient_color : source_color = vec3(0.05, 0.05, 0.05);
+    // Controls the intensity of the analytical Kajiya-Kay specular highlight, independent of the LUT-based BSDF intensity.
+//  // Controls the intensity of the analytical Kajiya-Kay specular highlight, independent of the LUT-based BSDF intensity.
+    uniform float hair_specular_intensity : hint_range(0.0, 5.0) = 0.3;
+//  uniform float hair_specular_intensity : hint_range(0.0, 5.0) = 0.3;
+    // Controls the intensity of the multiple-scattering approximation that simulates light bouncing between hair strands.
+//  // Controls the intensity of the multiple-scattering approximation that simulates light bouncing between hair strands.
+    uniform float multiple_scatter_intensity : hint_range(0.0, 2.0) = 0.5;
+//  uniform float multiple_scatter_intensity : hint_range(0.0, 2.0) = 0.5;
+    // Controls the intensity of the view-dependent Fresnel rim lighting on the hair silhouette.
+//  // Controls the intensity of the view-dependent Fresnel rim lighting on the hair silhouette.
+    uniform float rim_light_intensity : hint_range(0.0, 2.0) = 0.5;
+//  uniform float rim_light_intensity : hint_range(0.0, 2.0) = 0.5;
     group_uniforms;
 //  group_uniforms;
 
     // Post-processing and stylization properties.
 //  // Post-processing and stylization properties.
-    // This property toggles the film grain noise overlay.
-//  // This property toggles the film grain noise overlay.
+    // Controls the optional film grain noise overlay effect.
+//  // Controls the optional film grain noise overlay effect.
     group_uniforms post_processing;
 //  group_uniforms post_processing;
     uniform bool enable_film_grain_noise = false;
 //  uniform bool enable_film_grain_noise = false;
-    // This property defines the intensity of stylistic overlays, such as the film grain noise.
-//  // This property defines the intensity of stylistic overlays, such as the film grain noise.
+    // Defines the intensity of the film grain noise overlay.
+//  // Defines the intensity of the film grain noise overlay.
     uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.01;
 //  uniform float film_grain_intensity : hint_range(0.0, 1.0) = 0.01;
     // Controls the animation speed of the film grain noise pattern.
@@ -173,12 +185,16 @@
 
     const float constant_inverse_pi = 0.31830988618;
 //  const float constant_inverse_pi = 0.31830988618;
+    const float constant_half_pi = 1.5707963268;
+//  const float constant_half_pi = 1.5707963268;
+    const float constant_pi = 3.1415926536;
+//  const float constant_pi = 3.1415926536;
     const float constant_lut_half_texel_scale = 0.984375;
 //  const float constant_lut_half_texel_scale = 0.984375;
     const float constant_lut_half_texel_offset = 0.0078125;
 //  const float constant_lut_half_texel_offset = 0.0078125;
-    const vec3 constant_luminance_weights = vec3(0.299, 0.587, 0.114);
-//  const vec3 constant_luminance_weights = vec3(0.299, 0.587, 0.114);
+    const vec3 constant_luminance_weights = vec3(0.2126, 0.7152, 0.0722);
+//  const vec3 constant_luminance_weights = vec3(0.2126, 0.7152, 0.0722);
 
     varying vec3 stored_hair_tangent;
 //  varying vec3 stored_hair_tangent;
@@ -197,14 +213,21 @@
     varying vec2 scaled_normal_uv;
 //  varying vec2 scaled_normal_uv;
 
-    // A custom function for calculating ambient and indirect lighting.
-//  // A custom function for calculating ambient and indirect lighting.
-    // This function allows developers to inject specific logic for global illumination or stylistic ambient shading.
-//  // This function allows developers to inject specific logic for global illumination or stylistic ambient shading.
+    // Stores the unscaled base color for use by the multiple-scattering approximation in the per-light function.
+//  // Stores the unscaled base color for use by the multiple-scattering approximation in the per-light function.
+    // This avoids coupling the backlight transmission intensity with the scatter term.
+//  // This avoids coupling the backlight transmission intensity with the scatter term.
+    varying vec3 stored_base_color;
+//  varying vec3 stored_base_color;
+
+    // A custom function that calculates ambient and indirect lighting.
+//  // A custom function that calculates ambient and indirect lighting.
+    // This function allows developers to inject custom logic for global illumination or stylistic ambient shading.
+//  // This function allows developers to inject custom logic for global illumination or stylistic ambient shading.
     vec3 compute_custom_ambient_lighting(vec3 surface_base_color_rgb, vec3 surface_normal, vec3 surface_tangent, vec3 view_direction) {
 //  vec3 compute_custom_ambient_lighting(vec3 surface_base_color_rgb, vec3 surface_normal, vec3 surface_tangent, vec3 view_direction) {
-        // Override this function to implement custom ambient lighting (e.g., hemispheric light, cubemap sample).
-//      // Override this function to implement custom ambient lighting (e.g., hemispheric light, cubemap sample).
+        // Override this function to implement custom ambient lighting, such as hemispheric lighting or cubemap sampling.
+//      // Override this function to implement custom ambient lighting, such as hemispheric lighting or cubemap sampling.
         return surface_base_color_rgb * custom_ambient_color;
 //      return surface_base_color_rgb * custom_ambient_color;
     }
@@ -212,23 +235,65 @@
 
     // Generates a pseudo-random value based on a 2D input coordinate.
 //  // Generates a pseudo-random value based on a 2D input coordinate.
-    // This function is utilized to synthesize a static noise pattern for the film grain visual effect.
-//  // This function is utilized to synthesize a static noise pattern for the film grain visual effect.
+    // This function produces a static noise pattern for the film grain visual effect.
+//  // This function produces a static noise pattern for the film grain visual effect.
     float compute_random_grain_noise(vec2 input_screen_coordinate) {
 //  float compute_random_grain_noise(vec2 input_screen_coordinate) {
-        // Computes a pseudo-random float utilizing a dot product and a sine function hash.
-//      // Computes a pseudo-random float utilizing a dot product and a sine function hash.
+        // Computes a pseudo-random float using a dot product and a sine function hash.
+//      // Computes a pseudo-random float using a dot product and a sine function hash.
         return fract(sin(dot(input_screen_coordinate, vec2(12.9898, 78.233))) * 43758.5453);
 //      return fract(sin(dot(input_screen_coordinate, vec2(12.9898, 78.233))) * 43758.5453);
     }
 //  }
 
+    // Approximates the arcsine function using a polynomial fit (Abramowitz and Stegun).
+//  // Approximates the arcsine function using a polynomial fit (Abramowitz and Stegun).
+    // This function replaces the hardware asin() to reduce per-light ALU cost. Maximum error is approximately 6.7e-5 radians.
+//  // This function replaces the hardware asin() to reduce per-light ALU cost. Maximum error is approximately 6.7e-5 radians.
+    float compute_fast_approximate_arcsine(float input_sine_value) {
+//  float compute_fast_approximate_arcsine(float input_sine_value) {
+        float absolute_input = abs(input_sine_value);
+//      float absolute_input = abs(input_sine_value);
+        // Clamps the absolute input to 1.0 to prevent NaN from floating-point overshoot in the subsequent sqrt(1.0 - absolute_input).
+//      // Clamps the absolute input to 1.0 to prevent NaN from floating-point overshoot in the subsequent sqrt(1.0 - absolute_input).
+        absolute_input = min(absolute_input, 1.0);
+//      absolute_input = min(absolute_input, 1.0);
+        float polynomial_result = ((-0.0187293 * absolute_input + 0.0742610) * absolute_input - 0.2121144) * absolute_input + 1.5707288;
+//      float polynomial_result = ((-0.0187293 * absolute_input + 0.0742610) * absolute_input - 0.2121144) * absolute_input + 1.5707288;
+        polynomial_result = constant_half_pi - (polynomial_result * sqrt(1.0 - absolute_input));
+//      polynomial_result = constant_half_pi - (polynomial_result * sqrt(1.0 - absolute_input));
+        return input_sine_value < 0.0 ? -polynomial_result : polynomial_result;
+//      return input_sine_value < 0.0 ? -polynomial_result : polynomial_result;
+    }
+//  }
+
+    // Approximates the arccosine function using a polynomial fit (Abramowitz and Stegun).
+//  // Approximates the arccosine function using a polynomial fit (Abramowitz and Stegun).
+    // This function replaces the hardware acos() to reduce per-light ALU cost. Maximum error is approximately 6.7e-5 radians.
+//  // This function replaces the hardware acos() to reduce per-light ALU cost. Maximum error is approximately 6.7e-5 radians.
+    float compute_fast_approximate_arccosine(float input_cosine_value) {
+//  float compute_fast_approximate_arccosine(float input_cosine_value) {
+        float absolute_input = abs(input_cosine_value);
+//      float absolute_input = abs(input_cosine_value);
+        // Clamps the absolute input to 1.0 to prevent NaN from floating-point overshoot in the subsequent sqrt(1.0 - absolute_input).
+//      // Clamps the absolute input to 1.0 to prevent NaN from floating-point overshoot in the subsequent sqrt(1.0 - absolute_input).
+        absolute_input = min(absolute_input, 1.0);
+//      absolute_input = min(absolute_input, 1.0);
+        float polynomial_result = ((-0.0187293 * absolute_input + 0.0742610) * absolute_input - 0.2121144) * absolute_input + 1.5707288;
+//      float polynomial_result = ((-0.0187293 * absolute_input + 0.0742610) * absolute_input - 0.2121144) * absolute_input + 1.5707288;
+        polynomial_result *= sqrt(1.0 - absolute_input);
+//      polynomial_result *= sqrt(1.0 - absolute_input);
+        return input_cosine_value >= 0.0 ? polynomial_result : constant_pi - polynomial_result;
+//      return input_cosine_value >= 0.0 ? polynomial_result : constant_pi - polynomial_result;
+    }
+//  }
+
     void vertex() {
 //  void vertex() {
-        // The standard vertex transformation pass.
-//      // The standard vertex transformation pass.
-        // This function is intentionally left empty to allow Godot's default vertex processing to handle geometry transformations.
-//      // This function is intentionally left empty to allow Godot's default vertex processing to handle geometry transformations.
+        // Vertex-stage pre-computation pass.
+//      // Vertex-stage pre-computation pass.
+        // Pre-scales UV coordinates in the vertex stage to avoid redundant per-fragment multiplication.
+//      // Pre-scales UV coordinates in the vertex stage to avoid redundant per-fragment multiplication.
         scaled_detail_uv = UV * detail_texture_uv_scale;
 //      scaled_detail_uv = UV * detail_texture_uv_scale;
         scaled_ao_uv = UV * hair_ambient_occlusion_uv_coordinate_scale;
@@ -249,42 +314,48 @@
         float sampled_detail_alpha = sampled_detail_texel.a;
 //      float sampled_detail_alpha = sampled_detail_texel.a;
 
-        // Applies the alpha from the detail texture and the base color to determine the hair's transparency and sorting.
-//      // Applies the alpha from the detail texture and the base color to determine the hair's transparency and sorting.
+        // Applies the alpha from the detail texture and the base color to determine the fragment's transparency and depth-sorting behavior.
+//      // Applies the alpha from the detail texture and the base color to determine the fragment's transparency and depth-sorting behavior.
         ALPHA = base_albedo_color.a * sampled_detail_alpha;
 //      ALPHA = base_albedo_color.a * sampled_detail_alpha;
 
         // --- Two-Pass Transparency Logic ---
 //      // --- Two-Pass Transparency Logic ---
-        // Generates a high-frequency dither noise value to soften the clipping threshold for fringes.
-//      // Generates a high-frequency dither noise value to soften the clipping threshold for fringes.
-        float generated_dither_noise_value = compute_random_grain_noise(SCREEN_UV * 100.0 + vec2(TIME) * dither_noise_speed);
-//      float generated_dither_noise_value = compute_random_grain_noise(SCREEN_UV * 100.0 + vec2(TIME) * dither_noise_speed);
-        float calculated_dithered_threshold = opaque_core_threshold * (0.8 + (generated_dither_noise_value * 0.4));
-//      float calculated_dithered_threshold = opaque_core_threshold * (0.8 + (generated_dither_noise_value * 0.4));
+        // The dither noise is only computed when the two-pass system is active (mode 1 or 2) to avoid unnecessary work in single-pass mode 0.
+//      // The dither noise is only computed when the two-pass system is active (mode 1 or 2) to avoid unnecessary work in single-pass mode 0.
+        if (render_pass_mode != 0) {
+//      if (render_pass_mode != 0) {
+            // Generates a high-frequency dither noise value to soften the clipping threshold for fringes.
+//          // Generates a high-frequency dither noise value to soften the clipping threshold for fringes.
+            float generated_dither_noise_value = compute_random_grain_noise(SCREEN_UV * 100.0 + vec2(TIME) * dither_noise_speed);
+//          float generated_dither_noise_value = compute_random_grain_noise(SCREEN_UV * 100.0 + vec2(TIME) * dither_noise_speed);
+            float calculated_dithered_threshold = opaque_core_threshold * (0.8 + (generated_dither_noise_value * 0.4));
+//          float calculated_dithered_threshold = opaque_core_threshold * (0.8 + (generated_dither_noise_value * 0.4));
 
-        if (render_pass_mode == 1) {
-//      if (render_pass_mode == 1) {
-            // Pass 1: Opaque Core. Discards soft fringes to write only the solid core to the depth buffer.
-//          // Pass 1: Opaque Core. Discards soft fringes to write only the solid core to the depth buffer.
-            if (ALPHA < calculated_dithered_threshold) {
-//          if (ALPHA < calculated_dithered_threshold) {
-                discard;
-//              discard;
-            }
-//          }
-            // Forces full opacity for the core to ensure perfect depth writing and shadow casting.
-//          // Forces full opacity for the core to ensure perfect depth writing and shadow casting.
-            ALPHA = 1.0;
-//          ALPHA = 1.0;
-        } else if (render_pass_mode == 2) {
-//      } else if (render_pass_mode == 2) {
-            // Pass 2: Soft Fringes. Renders only the soft, transparent areas, discarding the core to avoid overdraw.
-//          // Pass 2: Soft Fringes. Renders only the soft, transparent areas, discarding the core to avoid overdraw.
-            if (ALPHA >= calculated_dithered_threshold) {
-//          if (ALPHA >= calculated_dithered_threshold) {
-                discard;
-//              discard;
+            if (render_pass_mode == 1) {
+//          if (render_pass_mode == 1) {
+                // Pass 1: Opaque Core. Discards soft fringes to write only the solid core to the depth buffer.
+//              // Pass 1: Opaque Core. Discards soft fringes to write only the solid core to the depth buffer.
+                if (ALPHA < calculated_dithered_threshold) {
+//              if (ALPHA < calculated_dithered_threshold) {
+                    discard;
+//                  discard;
+                }
+//              }
+                // Forces full opacity for the core to ensure perfect depth writing and shadow casting.
+//              // Forces full opacity for the core to ensure perfect depth writing and shadow casting.
+                ALPHA = 1.0;
+//              ALPHA = 1.0;
+            } else if (render_pass_mode == 2) {
+//          } else if (render_pass_mode == 2) {
+                // Pass 2: Soft Fringes. Renders only the soft, transparent areas, discarding the core to avoid overdraw.
+//              // Pass 2: Soft Fringes. Renders only the soft, transparent areas, discarding the core to avoid overdraw.
+                if (ALPHA >= calculated_dithered_threshold) {
+//              if (ALPHA >= calculated_dithered_threshold) {
+                    discard;
+//                  discard;
+                }
+//              }
             }
 //          }
         }
@@ -292,12 +363,21 @@
 
         // --- Expensive Calculations Follow ---
 //      // --- Expensive Calculations Follow ---
-        // If the fragment was not discarded, the shader proceeds with heavy mathematical operations.
-//      // If the fragment was not discarded, the shader proceeds with heavy mathematical operations.
+        // If the fragment was not discarded, the shader proceeds with computationally expensive operations.
+//      // If the fragment was not discarded, the shader proceeds with computationally expensive operations.
         vec3 sampled_detail_color = sampled_detail_texel.rgb;
 //      vec3 sampled_detail_color = sampled_detail_texel.rgb;
         vec3 calculated_base_color = base_albedo_color.rgb * sampled_detail_color;
 //      vec3 calculated_base_color = base_albedo_color.rgb * sampled_detail_color;
+
+        // Stores the unscaled base color for the multiple-scattering and rim lighting terms in the per-light function.
+//      // Stores the unscaled base color for the multiple-scattering and rim lighting terms in the per-light function.
+        // This assignment is placed before the film grain noise pass to prevent screen-space noise from propagating into view-independent lighting terms.
+//      // This assignment is placed before the film grain noise pass to prevent screen-space noise from propagating into view-independent lighting terms.
+        // It also avoids coupling the backlight transmission intensity with the scatter and rim calculations.
+//      // It also avoids coupling the backlight transmission intensity with the scatter and rim calculations.
+        stored_base_color = calculated_base_color;
+//      stored_base_color = calculated_base_color;
 
         // --- Ambient Occlusion Calculation ---
 //      // --- Ambient Occlusion Calculation ---
@@ -313,8 +393,8 @@
             float sampled_hair_ao = texture(hair_ambient_occlusion_texture, scaled_ao_uv).r;
 //          float sampled_hair_ao = texture(hair_ambient_occlusion_texture, scaled_ao_uv).r;
 
-            // Interpolates between the un-occluded baseline (1.0) and the sampled value based on the intensity uniform.
-//          // Interpolates between the un-occluded baseline (1.0) and the sampled value based on the intensity uniform.
+            // Interpolates between the unoccluded baseline (1.0) and the sampled value based on the intensity uniform.
+//          // Interpolates between the unoccluded baseline (1.0) and the sampled value based on the intensity uniform.
             applied_ao_value = mix(1.0, sampled_hair_ao, hair_ambient_occlusion_intensity);
 //          applied_ao_value = mix(1.0, sampled_hair_ao, hair_ambient_occlusion_intensity);
 
@@ -323,8 +403,8 @@
             AO = applied_ao_value;
 //          AO = applied_ao_value;
 
-            // Ensures the ambient occlusion also affects direct light sources, enhancing the grounding of folds and deep geometry.
-//          // Ensures the ambient occlusion also affects direct light sources, enhancing the grounding of folds and deep geometry.
+            // Ensures the ambient occlusion also affects direct light sources, deepening the shadowing of folds and recessed geometry.
+//          // Ensures the ambient occlusion also affects direct light sources, deepening the shadowing of folds and recessed geometry.
             AO_LIGHT_AFFECT = 1.0;
 //          AO_LIGHT_AFFECT = 1.0;
         }
@@ -339,8 +419,8 @@
             float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV + vec2(TIME) * film_grain_noise_speed);
 //          float generated_grain_noise_value = compute_random_grain_noise(SCREEN_UV + vec2(TIME) * film_grain_noise_speed);
 
-            // Remaps the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scales it by the chosen intensity.
-//          // Remaps the grain noise value from the range [0.0, 1.0] to [-1.0, 1.0] and scales it by the chosen intensity.
+            // Remaps the grain noise value from the range [0.0, 1.0] to [-0.5, 0.5] and scales it by the configured intensity.
+//          // Remaps the grain noise value from the range [0.0, 1.0] to [-0.5, 0.5] and scales it by the configured intensity.
             float applied_grain_color_adjustment = (generated_grain_noise_value - 0.5) * film_grain_intensity;
 //          float applied_grain_color_adjustment = (generated_grain_noise_value - 0.5) * film_grain_intensity;
 
@@ -351,8 +431,8 @@
         }
 //      }
 
-        // By passing this variable as a varying, the shader avoids redundant texture sampling in the per-pixel lighting pass.
-//      // By passing this variable as a varying, the shader avoids redundant texture sampling in the per-pixel lighting pass.
+        // Passes the result as a varying to avoid redundant texture sampling in the per-light function.
+//      // Passes the result as a varying to avoid redundant texture sampling in the per-light function.
         stored_raw_base_color = calculated_base_color * backlight_transmission_intensity;
 //      stored_raw_base_color = calculated_base_color * backlight_transmission_intensity;
 
@@ -376,12 +456,12 @@
 
         // --- Precompute View-Dependent Math ---
 //      // --- Precompute View-Dependent Math ---
-        // Hoisting per-pixel operations out of the per-light function improves performance when multiple light sources illuminate the hair.
-//      // Hoisting per-pixel operations out of the per-light function improves performance when multiple light sources illuminate the hair.
+        // Precomputing per-pixel values outside the per-light function improves performance when multiple light sources illuminate the hair.
+//      // Precomputing per-pixel values outside the per-light function improves performance when multiple light sources illuminate the hair.
         float sine_angle_theta_outgoing = dot(VIEW, normalized_hair_tangent);
 //      float sine_angle_theta_outgoing = dot(VIEW, normalized_hair_tangent);
-        float angle_theta_outgoing = asin(clamp(sine_angle_theta_outgoing, -1.0, 1.0));
-//      float angle_theta_outgoing = asin(clamp(sine_angle_theta_outgoing, -1.0, 1.0));
+        float angle_theta_outgoing = compute_fast_approximate_arcsine(sine_angle_theta_outgoing);
+//      float angle_theta_outgoing = compute_fast_approximate_arcsine(sine_angle_theta_outgoing);
         float texture_coordinate_v = (angle_theta_outgoing * constant_inverse_pi) + 0.5;
 //      float texture_coordinate_v = (angle_theta_outgoing * constant_inverse_pi) + 0.5;
         float cosine_squared_outgoing = max(1.0 - (sine_angle_theta_outgoing * sine_angle_theta_outgoing), 0.0);
@@ -394,10 +474,10 @@
 
         if (enable_custom_ambient_lighting) {
 //      if (enable_custom_ambient_lighting) {
-            // Suppresses Godot's default Physically Based Rendering (PBR) ambient lighting by setting the ALBEDO to black.
-//          // Suppresses Godot's default Physically Based Rendering (PBR) ambient lighting by setting the ALBEDO to black.
-            // This prevents the built-in ambient light from being added to the output.
-//          // This prevents the built-in ambient light from being added to the output.
+            // Suppresses Godot's default PBR ambient lighting by setting ALBEDO to black.
+//          // Suppresses Godot's default PBR ambient lighting by setting ALBEDO to black.
+            // This prevents the built-in ambient light from being added to the final output.
+//          // This prevents the built-in ambient light from being added to the final output.
             ALBEDO = vec3(0.0);
 //          ALBEDO = vec3(0.0);
 
@@ -423,10 +503,10 @@
         }
 //      }
 
-        // Ensures the shader does not output default PBR metallic or roughness values.
-//      // Ensures the shader does not output default PBR metallic or roughness values.
-        // Setting the ROUGHNESS to 1.0 and the METALLIC to 0.0 prevents Godot's standard reflections from interfering with the custom BSDF lighting function.
-//      // Setting the ROUGHNESS to 1.0 and the METALLIC to 0.0 prevents Godot's standard reflections from interfering with the custom BSDF lighting function.
+        // Overrides the default PBR metallic and roughness values.
+//      // Overrides the default PBR metallic and roughness values.
+        // Setting ROUGHNESS to 1.0 and METALLIC to 0.0 prevents Godot's standard reflections from interfering with the custom BSDF lighting.
+//      // Setting ROUGHNESS to 1.0 and METALLIC to 0.0 prevents Godot's standard reflections from interfering with the custom BSDF lighting.
         ROUGHNESS = 1.0;
 //      ROUGHNESS = 1.0;
         METALLIC = 0.0;
@@ -460,6 +540,16 @@
         vec3 view_direction = VIEW;
 //      vec3 view_direction = VIEW;
 
+        // Precomputes the attenuated light color, reused across direct BSDF, specular, multiple scattering, and rim lighting calculations.
+//      // Precomputes the attenuated light color, reused across direct BSDF, specular, multiple scattering, and rim lighting calculations.
+        vec3 attenuated_light_color = LIGHT_COLOR * ATTENUATION;
+//      vec3 attenuated_light_color = LIGHT_COLOR * ATTENUATION;
+
+        // Precomputes the dot product of the surface normal and light direction, reused for wrap transmission, multiple scattering, and rim lighting.
+//      // Precomputes the dot product of the surface normal and light direction, reused for wrap transmission, multiple scattering, and rim lighting.
+        float dot_normal_light = dot(NORMAL, light_direction);
+//      float dot_normal_light = dot(NORMAL, light_direction);
+
         // --- Retrieve Precomputed View-Dependent Math ---
 //      // --- Retrieve Precomputed View-Dependent Math ---
         float texture_coordinate_v = stored_outgoing_data.x;
@@ -473,8 +563,8 @@
 //      // Step 1: Calculates the longitudinal inclinations (theta angles) for the incident light.
         float sine_angle_theta_incident = dot(light_direction, tangent_direction);
 //      float sine_angle_theta_incident = dot(light_direction, tangent_direction);
-        float angle_theta_incident = asin(clamp(sine_angle_theta_incident, -1.0, 1.0));
-//      float angle_theta_incident = asin(clamp(sine_angle_theta_incident, -1.0, 1.0));
+        float angle_theta_incident = compute_fast_approximate_arcsine(sine_angle_theta_incident);
+//      float angle_theta_incident = compute_fast_approximate_arcsine(sine_angle_theta_incident);
 
         // Maps the incident longitudinal angle to the U texture coordinate.
 //      // Maps the incident longitudinal angle to the U texture coordinate.
@@ -496,10 +586,10 @@
         float squared_lengths_product = cosine_squared_incident * cosine_squared_outgoing;
 //      float squared_lengths_product = cosine_squared_incident * cosine_squared_outgoing;
 
-        // Creates a mask using the step function to replace the conditional branch.
-//      // Creates a mask using the step function to replace the conditional branch.
-        // It returns 1.0 only if both the incident and outgoing squared cosines are above the threshold.
-//      // It returns 1.0 only if both the incident and outgoing squared cosines are above the threshold.
+        // Creates a mask using the step function to replace a conditional branch.
+//      // Creates a mask using the step function to replace a conditional branch.
+        // Returns 1.0 only when both the incident and outgoing squared cosines are above the threshold.
+//      // Returns 1.0 only when both the incident and outgoing squared cosines are above the threshold.
         float valid_product_mask = step(0.000001, cosine_squared_incident) * step(0.000001, cosine_squared_outgoing);
 //      float valid_product_mask = step(0.000001, cosine_squared_incident) * step(0.000001, cosine_squared_outgoing);
 
@@ -515,16 +605,13 @@
 
         // Calculates the azimuthal difference angle (phi).
 //      // Calculates the azimuthal difference angle (phi).
-        float calculated_angle_phi_difference = acos(clamp(dot_product_projected_light_and_view * inverse_projected_lengths_product, -1.0, 1.0));
-//      float calculated_angle_phi_difference = acos(clamp(dot_product_projected_light_and_view * inverse_projected_lengths_product, -1.0, 1.0));
-
-        float angle_phi_difference = calculated_angle_phi_difference;
-//      float angle_phi_difference = calculated_angle_phi_difference;
+        float calculated_angle_phi_difference = compute_fast_approximate_arccosine(dot_product_projected_light_and_view * inverse_projected_lengths_product);
+//      float calculated_angle_phi_difference = compute_fast_approximate_arccosine(dot_product_projected_light_and_view * inverse_projected_lengths_product);
 
         // Maps the azimuthal difference from the range [0, PI] to the normalized texture coordinate [0.0, 1.0] for the W axis (depth of the 3D texture).
 //      // Maps the azimuthal difference from the range [0, PI] to the normalized texture coordinate [0.0, 1.0] for the W axis (depth of the 3D texture).
-        float texture_coordinate_w = angle_phi_difference * constant_inverse_pi;
-//      float texture_coordinate_w = angle_phi_difference * constant_inverse_pi;
+        float texture_coordinate_w = calculated_angle_phi_difference * constant_inverse_pi;
+//      float texture_coordinate_w = calculated_angle_phi_difference * constant_inverse_pi;
 
         // Applies a half-texel correction specific to the 64x64x64 LUT dimensions.
 //      // Applies a half-texel correction specific to the 64x64x64 LUT dimensions.
@@ -537,10 +624,10 @@
 
         // Step 3: Samples the pre-baked BSDF Look-Up Table.
 //      // Step 3: Samples the pre-baked BSDF Look-Up Table.
-        // Evaluates the complex hair scattering function by sampling the 3D texture at the calculated (U, V, W) coordinates.
-//      // Evaluates the complex hair scattering function by sampling the 3D texture at the calculated (U, V, W) coordinates.
-        // Applies valid_product_mask to fade out the LUT when azimuthal angle is degenerate (light/view tangent-aligned).
-//      // Applies valid_product_mask to fade out the LUT when azimuthal angle is degenerate (light/view tangent-aligned).
+        // Evaluates the hair scattering function by sampling the 3D texture at the calculated (U, V, W) coordinates.
+//      // Evaluates the hair scattering function by sampling the 3D texture at the calculated (U, V, W) coordinates.
+        // Applies valid_product_mask to fade out the LUT when the azimuthal angle is degenerate (light/view tangent-aligned).
+//      // Applies valid_product_mask to fade out the LUT when the azimuthal angle is degenerate (light/view tangent-aligned).
         vec3 sampled_brdf_evaluation = texture(hair_bsdf_texture_lut, texture_coordinates_3d).rgb * valid_product_mask;
 //      vec3 sampled_brdf_evaluation = texture(hair_bsdf_texture_lut, texture_coordinates_3d).rgb * valid_product_mask;
 
@@ -551,49 +638,49 @@
 
         // Direct BSDF Evaluation: Multiplies the BSDF sample by the light color, attenuation (shadows/distance), and baked luminance/specular intensity.
 //      // Direct BSDF Evaluation: Multiplies the BSDF sample by the light color, attenuation (shadows/distance), and baked luminance/specular intensity.
-        vec3 evaluated_direct_light = sampled_brdf_evaluation * LIGHT_COLOR * ATTENUATION * stored_detail_luminance;
-//      vec3 evaluated_direct_light = sampled_brdf_evaluation * LIGHT_COLOR * ATTENUATION * stored_detail_luminance;
+        vec3 evaluated_direct_light = sampled_brdf_evaluation * attenuated_light_color * stored_detail_luminance;
+//      vec3 evaluated_direct_light = sampled_brdf_evaluation * attenuated_light_color * stored_detail_luminance;
 
-        // Fake Light Transmission (Subsurface Scattering): Simulates light bleeding through the hair volume.
-//      // Fake Light Transmission (Subsurface Scattering): Simulates light bleeding through the hair volume.
+        // Fake Light Transmission (Subsurface Scattering Approximation): Simulates light passing through the hair volume.
+//      // Fake Light Transmission (Subsurface Scattering Approximation): Simulates light passing through the hair volume.
         // Applies a wrap lighting model to soften the terminator and allow light to wrap around the geometry.
 //      // Applies a wrap lighting model to soften the terminator and allow light to wrap around the geometry.
-        float constant_transmission_wrap_factor = 0.5;
-//      float constant_transmission_wrap_factor = 0.5;
-        float calculated_wrap_transmission_dot = max(dot(NORMAL, -light_direction) + constant_transmission_wrap_factor, 0.0) / (1.0 + constant_transmission_wrap_factor);
-//      float calculated_wrap_transmission_dot = max(dot(NORMAL, -light_direction) + constant_transmission_wrap_factor, 0.0) / (1.0 + constant_transmission_wrap_factor);
+        const float constant_transmission_wrap_factor = 0.5;
+//      const float constant_transmission_wrap_factor = 0.5;
+        float calculated_wrap_transmission_dot = max(-dot_normal_light + constant_transmission_wrap_factor, 0.0) / (1.0 + constant_transmission_wrap_factor);
+//      float calculated_wrap_transmission_dot = max(-dot_normal_light + constant_transmission_wrap_factor, 0.0) / (1.0 + constant_transmission_wrap_factor);
         float computed_backlight_scatter = (calculated_wrap_transmission_dot * calculated_wrap_transmission_dot) * max(-dot_view_light, 0.0);
 //      float computed_backlight_scatter = (calculated_wrap_transmission_dot * calculated_wrap_transmission_dot) * max(-dot_view_light, 0.0);
         vec3 evaluated_transmission = stored_raw_base_color * LIGHT_COLOR * computed_backlight_scatter;
 //      vec3 evaluated_transmission = stored_raw_base_color * LIGHT_COLOR * computed_backlight_scatter;
 
-        // Analytical Anisotropic Specular Highlight (Kajiya-Kay): Adds crisp strand reflections over the soft LUT base.
-//      // Analytical Anisotropic Specular Highlight (Kajiya-Kay): Adds crisp strand reflections over the soft LUT base.
+        // Analytical Anisotropic Specular Highlight (Kajiya-Kay): Adds sharp strand reflections over the soft LUT-based lighting.
+//      // Analytical Anisotropic Specular Highlight (Kajiya-Kay): Adds sharp strand reflections over the soft LUT-based lighting.
         float calculated_specular_term = pow(max(sqrt(cosine_squared_incident * cosine_squared_outgoing) + sine_angle_theta_incident * sine_angle_theta_outgoing, 0.0), hair_specular_power);
 //      float calculated_specular_term = pow(max(sqrt(cosine_squared_incident * cosine_squared_outgoing) + sine_angle_theta_incident * sine_angle_theta_outgoing, 0.0), hair_specular_power);
-        vec3 evaluated_analytical_specular = LIGHT_COLOR * ATTENUATION * calculated_specular_term * direct_bsdf_intensity;
-//      vec3 evaluated_analytical_specular = LIGHT_COLOR * ATTENUATION * calculated_specular_term * direct_bsdf_intensity;
+        vec3 evaluated_analytical_specular = attenuated_light_color * calculated_specular_term * hair_specular_intensity;
+//      vec3 evaluated_analytical_specular = attenuated_light_color * calculated_specular_term * hair_specular_intensity;
 
-        // Multiple-Scattering Approximation: Simulates light bouncing between strands, crucial for light-colored hair.
-//      // Multiple-Scattering Approximation: Simulates light bouncing between strands, crucial for light-colored hair.
-        float calculated_multiple_scatter_factor = smoothstep(-0.5, 1.0, dot(NORMAL, light_direction));
-//      float calculated_multiple_scatter_factor = smoothstep(-0.5, 1.0, dot(NORMAL, light_direction));
-        vec3 evaluated_multiple_scatter = stored_raw_base_color * stored_raw_base_color * calculated_multiple_scatter_factor * LIGHT_COLOR * ATTENUATION * 0.5;
-//      vec3 evaluated_multiple_scatter = stored_raw_base_color * stored_raw_base_color * calculated_multiple_scatter_factor * LIGHT_COLOR * ATTENUATION * 0.5;
+        // Multiple-Scattering Approximation: Simulates light bouncing between strands, which is essential for light-colored hair.
+//      // Multiple-Scattering Approximation: Simulates light bouncing between strands, which is essential for light-colored hair.
+        float calculated_multiple_scatter_factor = smoothstep(-0.5, 1.0, dot_normal_light);
+//      float calculated_multiple_scatter_factor = smoothstep(-0.5, 1.0, dot_normal_light);
+        vec3 evaluated_multiple_scatter = stored_base_color * stored_base_color * calculated_multiple_scatter_factor * attenuated_light_color * multiple_scatter_intensity;
+//      vec3 evaluated_multiple_scatter = stored_base_color * stored_base_color * calculated_multiple_scatter_factor * attenuated_light_color * multiple_scatter_intensity;
 
-        // View-Dependent Fresnel Rim Lighting: Illuminates the silhouette to prevent a flat, solid appearance.
-//      // View-Dependent Fresnel Rim Lighting: Illuminates the silhouette to prevent a flat, solid appearance.
+        // View-Dependent Fresnel Rim Lighting: Illuminates the silhouette edges to prevent a flat, opaque appearance.
+//      // View-Dependent Fresnel Rim Lighting: Illuminates the silhouette edges to prevent a flat, opaque appearance.
         float calculated_fresnel_rim_factor = pow(1.0 - clamp(dot(NORMAL, view_direction), 0.0, 1.0), 3.0);
 //      float calculated_fresnel_rim_factor = pow(1.0 - clamp(dot(NORMAL, view_direction), 0.0, 1.0), 3.0);
-        float calculated_rim_light_intensity = smoothstep(0.0, 1.0, dot(NORMAL, light_direction)) * calculated_fresnel_rim_factor;
-//      float calculated_rim_light_intensity = smoothstep(0.0, 1.0, dot(NORMAL, light_direction)) * calculated_fresnel_rim_factor;
-        vec3 evaluated_rim_light = stored_raw_base_color * LIGHT_COLOR * ATTENUATION * calculated_rim_light_intensity * 0.5;
-//      vec3 evaluated_rim_light = stored_raw_base_color * LIGHT_COLOR * ATTENUATION * calculated_rim_light_intensity * 0.5;
+        float calculated_rim_light_intensity = smoothstep(0.0, 1.0, dot_normal_light) * calculated_fresnel_rim_factor;
+//      float calculated_rim_light_intensity = smoothstep(0.0, 1.0, dot_normal_light) * calculated_fresnel_rim_factor;
+        vec3 evaluated_rim_light = stored_base_color * attenuated_light_color * calculated_rim_light_intensity * rim_light_intensity;
+//      vec3 evaluated_rim_light = stored_base_color * attenuated_light_color * calculated_rim_light_intensity * rim_light_intensity;
 
-        // Combines the evaluated direct light, transmission, specular, multiple scattering, and rim lighting.
-//      // Combines the evaluated direct light, transmission, specular, multiple scattering, and rim lighting.
-        // Blends in a small baseline amount of transmission even in shadowed areas (where ATTENUATION approaches 0.0) to simulate global multiple scattering.
-//      // Blends in a small baseline amount of transmission even in shadowed areas (where ATTENUATION approaches 0.0) to simulate global multiple scattering.
+        // Combines the evaluated direct light, transmission, specular, multiple scattering, and rim lighting contributions.
+//      // Combines the evaluated direct light, transmission, specular, multiple scattering, and rim lighting contributions.
+        // Blends a small baseline of transmission even in shadowed areas (where ATTENUATION approaches 0.0) to simulate global multiple scattering.
+//      // Blends a small baseline of transmission even in shadowed areas (where ATTENUATION approaches 0.0) to simulate global multiple scattering.
         vec3 combined_final_light = evaluated_direct_light + evaluated_analytical_specular + evaluated_multiple_scatter + evaluated_rim_light + (evaluated_transmission * mix(0.1, 1.0, ATTENUATION));
 //      vec3 combined_final_light = evaluated_direct_light + evaluated_analytical_specular + evaluated_multiple_scatter + evaluated_rim_light + (evaluated_transmission * mix(0.1, 1.0, ATTENUATION));
 
